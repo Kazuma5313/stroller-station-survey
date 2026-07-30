@@ -354,6 +354,16 @@
   ];
 
 
+  /* ══ 送信先の設定 ══
+     ここが空のままなら「動作見本モード」（どこにも送信しない）。
+     Googleスプレッドシートに溜めたい場合は、GAS_SETUP.md の手順で
+     ウェブアプリを作り、その URL をここに貼る。それだけで本番モードになる。 */
+  var SUBMIT_URL = "";
+
+  var DEMO_TEXT = "動作見本（プロトタイプ）｜入力内容はどこにも送信されません";
+  var LIVE_TEXT = "ベビーカーで行ける駅ランキング｜匿名アンケート";
+  function isLive() { return /^https:\/\//.test(SUBMIT_URL); }
+
   /* ══ 選択肢 ══ */
   /* 評価するのは「駅の構造・設備」だけ。人の対応は再現しないため対象外 */
   var HELPED = [
@@ -441,8 +451,8 @@
       order: {}
     };
     idx = 0;
-    document.querySelector(".demo-bar").textContent =
-      "動作見本（プロトタイプ）｜入力内容はどこにも送信されません";
+    sent = { state: "idle", error: "" };
+    document.querySelector(".demo-bar").textContent = isLive() ? LIVE_TEXT : DEMO_TEXT;
     render();
   }
 
@@ -467,7 +477,7 @@
     var f = ["intro", "q1"];
     if (state.q1 === "forget") f.push("q2b");
     else f.push("q2", "q3", "q4", "q5", "q6", "q7");
-    f.push("gap", "q8", "q9", "q10", "q11", "q12", "result");
+    f.push("profile", "email", "gap", "trouble", "fix", "troublePhoto", "result");
     return f;
   }
   var REQUIRED = { q1:1, q2:1, q3:1, q4:1, q6:1, q2b:1 };
@@ -543,7 +553,7 @@
     function take(files) {
       for (var i = 0; i < files.length && photos[bucket].length < maxN; i++) {
         if (!/^image\//.test(files[i].type)) continue;
-        photos[bucket].push({ url: URL.createObjectURL(files[i]), name: files[i].name });
+        photos[bucket].push({ url: URL.createObjectURL(files[i]), name: files[i].name, file: files[i] });
       }
       paint(); renderNav();
     }
@@ -606,6 +616,93 @@
     inp.addEventListener("blur", function () { setTimeout(close, 120); });
     wrap.appendChild(inp);
     return wrap;
+  }
+
+  /* ══ 送信 ══
+     写真は端末側で長辺1200pxに縮めてから送る（そのままだと数MBになり失敗するため）。
+     位置情報(EXIF)はcanvasに描き直す過程で必ず落ちる。 */
+  var sent = { state: "idle", error: "" };   // idle / sending / done / failed
+
+  function shrink(file, maxSide, quality) {
+    return new Promise(function (resolve) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var w = img.width, h = img.height;
+        var scale = Math.min(1, maxSide / Math.max(w, h));
+        var c = document.createElement("canvas");
+        c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+
+  function collectPhotos(bucket) {
+    return Promise.all(photos[bucket].map(function (p) {
+      return p.file ? shrink(p.file, 1200, 0.72) : null;
+    })).then(function (arr) { return arr.filter(Boolean); });
+  }
+
+  function buildPayload() {
+    return Promise.all([collectPhotos("good"), collectPhotos("bad")]).then(function (r) {
+      return {
+        version: 1,
+        answeredAt: new Date().toISOString(),
+        route: state.q1 === "forget" ? "forget" : "main",
+        q1: state.q1,
+        q2_helped: state.q2,
+        q2b_wanted: state.q2b,
+        q3_station: state.station.trim().replace(/駅$/, ""),
+        q3_gate: state.gate,
+        q4_axes: state.axes,
+        q4_total: (function () {
+          var t = 0, n = 0;
+          AXES.forEach(function (a) { if (typeof state.axes[a.id] === "number") { t += state.axes[a.id]; n++; } });
+          return n === AXES.length ? t : null;
+        })(),
+        q5_comment: state.comment,
+        q6_recommend: state.recommend,
+        q7_consentSite: state.consentSite,
+        q7_consentPress: state.consentPress,
+        q7_credit: state.credit,
+        q8_childAge: state.childAge,
+        q8_freq: state.freq,
+        q8_pref: state.prefLive,
+        q9_email: state.email,
+        q10_troubleStation: state.tStation.trim().replace(/駅$/, ""),
+        q10_troubleItems: state.tItems,
+        q10_troubleDetail: state.tDetail,
+        q11_fix: state.tFix,
+        q12_consentOperator: state.consentOperator,
+        photosPublic: r[0],
+        photosPrivate: r[1]
+      };
+    });
+  }
+
+  function submitAnswers() {
+    if (sent.state === "sending" || sent.state === "done") return Promise.resolve();
+    if (!isLive()) { sent = { state: "done", error: "" }; return Promise.resolve(); }
+    sent = { state: "sending", error: "" };
+    render();
+    return buildPayload().then(function (payload) {
+      /* text/plain にするとプリフライトが飛ばず、GASのウェブアプリにそのまま届く */
+      return fetch(SUBMIT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+    }).then(function (res) {
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      sent = { state: "done", error: "" };
+      try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+    }).catch(function (e) {
+      sent = { state: "failed", error: e.message || "送信できませんでした" };
+    }).then(function () { render(); });
   }
 
   /* ══ 回答の充足チェック ══
@@ -776,13 +873,15 @@
         'いただいた内容は、その駅を運営する鉄道会社に<strong>匿名でお届けする改善リクエスト</strong>としてだけ使います。' +
         'どこがだめかを広めるより、直してもらうほうが、次に来る親子の役に立つと考えているからです。</p>'));
       w.appendChild(p);
-      w.appendChild(el('<p class="note">ここから先はすべて任意です。答えずに終えていただいても、ここまでの回答は記録されています。</p>'));
+      w.appendChild(el('<p class="note">ここから先はすべて任意です。答えずに終えていただいても、ここまでの回答は記録されています。<br>' +
+        '<strong>いま入力いただいたメールアドレスと、ここから先の内容は結びつけません。</strong>' +
+        'メールアドレスはお知らせの送信にだけ使い、回答とは別に保管します。</p>'));
       return w;
     },
 
-    q8: function () {
+    trouble: function () {
       var w = document.createElement("div");
-      w.appendChild(el('<p class="eyebrow priv">質問 8<span class="optional-tag">任意・非公開</span></p>'));
+      w.appendChild(el('<p class="eyebrow priv">質問 10<span class="optional-tag">任意・非公開</span></p>'));
       w.appendChild(el('<h1>ベビーカーで困った駅があれば、教えてください。</h1>'));
       w.appendChild(stationField(state.tStation, function (v) { state.tStation = v; save(); }));
       w.appendChild(el('<p class="field-label" style="margin-top:24px">どんなことに困りましたか？（あてはまるものすべて）</p>'));
@@ -792,18 +891,18 @@
       return w;
     },
 
-    q9: function () {
+    fix: function () {
       var w = document.createElement("div");
-      w.appendChild(el('<p class="eyebrow priv">質問 9<span class="optional-tag">任意・非公開</span></p>'));
+      w.appendChild(el('<p class="eyebrow priv">質問 11<span class="optional-tag">任意・非公開</span></p>'));
       w.appendChild(el('<h1>「ここだけ直れば行けるのに」という点を、ひとつだけ挙げるとしたら？</h1>'));
       w.appendChild(el('<p class="lede">いちばん困っている1点だけで大丈夫です。鉄道会社にそのままお届けします。</p>'));
       w.appendChild(textarea(state.tFix, 80, "例）ホーム端のエレベーターがもう1基あれば、朝でも乗れます。", function (v) { state.tFix = v; save(); }));
       return w;
     },
 
-    q10: function () {
+    troublePhoto: function () {
       var w = document.createElement("div");
-      w.appendChild(el('<p class="eyebrow priv">質問 10<span class="optional-tag">任意・非公開</span></p>'));
+      w.appendChild(el('<p class="eyebrow priv">質問 12<span class="optional-tag">任意・非公開</span></p>'));
       w.appendChild(el('<h1>困った場所の写真があれば、添付してください。</h1>'));
       w.appendChild(el('<p class="lede">この写真は<strong>公開されません</strong>。「この段差です」の1枚が、文章10件よりも改善を動かします。</p>'));
       w.appendChild(photoField("bad", 3));
@@ -815,9 +914,9 @@
       return w;
     },
 
-    q11: function () {
+    profile: function () {
       var w = document.createElement("div");
-      w.appendChild(el('<p class="eyebrow">質問 11<span class="optional-tag">すべて任意</span></p>'));
+      w.appendChild(el('<p class="eyebrow">質問 8<span class="optional-tag">すべて任意</span></p>'));
       w.appendChild(el('<h1>さしつかえなければ、あなたのことも。</h1>'));
       [["childAge","お子さんの年齢","例：1歳と4歳"],
        ["freq","ベビーカーでの電車利用","例：週に2回くらい"],
@@ -832,9 +931,9 @@
       return w;
     },
 
-    q12: function () {
+    email: function () {
       var w = document.createElement("div");
-      w.appendChild(el('<p class="eyebrow">質問 12<span class="optional-tag">任意</span></p>'));
+      w.appendChild(el('<p class="eyebrow">質問 9<span class="optional-tag">任意</span></p>'));
       w.appendChild(el('<h1>ランキングができたら、お知らせしますか？</h1>'));
       w.appendChild(el('<p class="lede">写真をあとから追加したいときのご案内もお送りします。ほかの用途には使いません。</p>'));
       var f = el('<div class="field"></div>');
@@ -850,6 +949,25 @@
       var w = document.createElement("div");
       var isForget = state.q1 === "forget";
 
+      /* 送信中・送信失敗はここで打ち切って専用表示にする */
+      if (sent.state === "sending") {
+        w.appendChild(el('<p class="eyebrow">送信しています</p>'));
+        w.appendChild(el('<h1>回答を送っています…</h1>'));
+        w.appendChild(el('<p class="lede">写真がある場合は少し時間がかかります。このまま閉じずにお待ちください。</p>'));
+        return w;
+      }
+      if (sent.state === "failed") {
+        w.appendChild(el('<p class="eyebrow" style="color:var(--poor)">送信できませんでした</p>'));
+        w.appendChild(el('<h1>回答を送れませんでした。</h1>'));
+        w.appendChild(el('<p class="lede">通信の状態が原因かもしれません。<strong>入力内容はこの端末に残っています</strong>ので、' +
+          'もう一度お試しいただけます。</p>'));
+        w.appendChild(el('<p class="note">' + esc(sent.error) + '</p>'));
+        var retry = el('<button type="button" class="btn" style="width:100%;margin-top:16px">もう一度送る</button>');
+        retry.addEventListener("click", function () { sent = { state:"idle", error:"" }; submitAnswers(); });
+        w.appendChild(retry);
+        return w;
+      }
+
       w.appendChild(el('<p class="eyebrow">ありがとうございました</p>'));
       w.appendChild(el('<h1>' + (isForget
         ? 'あなたの「あったら助かる」を、<br>受け取りました。'
@@ -859,6 +977,11 @@
       w.appendChild(el('<div class="closing"><p class="closing-lead">このアンケートは匿名です。</p>' +
         '<p>どなたが何を答えたかは記録していません。' +
         'あなたの回答が、ひとりの人のものとして扱われることはありません。</p></div>'));
+
+      if (!isLive()) {
+        w.appendChild(el('<p class="note" style="color:var(--poor)">' +
+          '⚠ これは動作見本です。<strong>回答は保存も送信もされていません。</strong></p>'));
+      }
 
       w.appendChild(el('<p class="field-label" style="margin-top:28px">このあとどうなるか</p>'));
       var steps = el('<ol class="afterlist"></ol>');
@@ -914,8 +1037,11 @@
   };
 
   function restartBtn() {
-    var d = el('<p class="divider-note">これは動作見本です。実際の回答は保存・送信されていません。<br></p>');
-    var b = el('<button type="button" class="btn ghost" style="margin-top:12px">最初からやり直す</button>');
+    var d = el('<p class="divider-note">' + (isLive()
+      ? 'もう1駅ぶん答えていただけるときは、こちらから。'
+      : 'これは動作見本です。実際の回答は保存・送信されていません。') + '<br></p>');
+    var b = el('<button type="button" class="btn ghost" style="margin-top:12px">' +
+      (isLive() ? 'もう1駅ぶん答える' : '最初からやり直す') + '</button>');
     b.addEventListener("click", reset);
     d.appendChild(b);
     return d;
@@ -976,8 +1102,12 @@
       : id === "gap" ? "答える"
       : f[idx + 1] === "result" ? "回答を終える" : "次へ";
     var next = el('<button type="button" class="btn">' + label + '</button>');
-    next.disabled = !canAdvance();
-    next.addEventListener("click", function () { if (canAdvance()) { idx++; save(); render(); } });
+    next.disabled = !canAdvance() || sent.state === "sending";
+    next.addEventListener("click", function () {
+      if (!canAdvance()) return;
+      idx++; save();
+      if (f[idx] === "result") submitAnswers(); else render();
+    });
     nav.appendChild(next);
 
     if (isOptional(id)) {
@@ -987,7 +1117,7 @@
     }
     if (id === "gap") {
       var end = el('<button type="button" class="btn skip">ここで終える</button>');
-      end.addEventListener("click", function () { idx = f.indexOf("result"); save(); render(); });
+      end.addEventListener("click", function () { idx = f.indexOf("result"); save(); submitAnswers(); });
       nav.appendChild(end);
     }
   }
@@ -1006,11 +1136,12 @@
     if (h) { h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true }); }
   }
 
+  document.querySelector(".demo-bar").textContent = isLive() ? LIVE_TEXT : DEMO_TEXT;
   var resumed = load();
   render();
   if (resumed) {
-    var bar = document.querySelector(".demo-bar");
-    bar.textContent = "前回の続きから再開しました（写真は見本のため保存されません）";
+    document.querySelector(".demo-bar").textContent =
+      "前回の続きから再開しました（写真は再度お選びください）";
   }
 })();
 </script>
