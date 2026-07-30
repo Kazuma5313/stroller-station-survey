@@ -1017,8 +1017,11 @@
       if (i < req.length - 1) line.appendChild(el('<span class="rail-seg' + ((done || now) ? " done" : "") + '"></span>'));
     });
     rail.appendChild(line);
+    /* 残りの必須問数は「現在地以降に必須画面がいくつあるか」で数える。
+       任意画面（Q5など）を挟んでも表示が行ったり来たりしないようにするため */
+    var left = req.filter(function (rid) { return f.indexOf(rid) >= idx; }).length;
     if (id === "intro") rail.appendChild(el('<span class="rail-label">必須 ' + req.length + ' 問・約90秒</span>'));
-    else if (pos >= 0) rail.appendChild(el('<span class="rail-label">あと ' + (req.length - pos) + ' 問</span>'));
+    else if (left > 0) rail.appendChild(el('<span class="rail-label">あと ' + left + ' 問</span>'));
     else rail.appendChild(el('<span class="rail-label opt">ここからは任意</span>'));
   }
 
