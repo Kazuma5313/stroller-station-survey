@@ -1,0 +1,1074 @@
+<title>ベビーカーで、行けた駅。｜アンケート動作見本</title>
+<style>
+  :root {
+    --ground:      #F5F7F9;
+    --surface:     #FFFFFF;
+    --ink:         #12233A;
+    --ink-soft:    #4A5C72;
+    --ink-faint:   #8494A6;
+    --rule:        #DDE3EA;
+    --sign:        #1B6FC4;
+    --sign-deep:   #12314F;
+    --sign-wash:   #E9F1FA;
+    --good:        #2F7D5B;
+    --mid:         #8A94A0;
+    --poor:        #C4622D;
+    --private:     #5B4B8A;
+    --private-wash:#EFECF7;
+
+    --f-display: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", serif;
+    --f-body: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", system-ui, sans-serif;
+
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
+    --maxw: 34rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:      #101822;
+      --surface:     #17212E;
+      --ink:         #E8EEF5;
+      --ink-soft:    #A9B8C8;
+      --ink-faint:   #6D7E91;
+      --rule:        #2A3846;
+      --sign:        #5FA8E8;
+      --sign-deep:   #A9CFF0;
+      --sign-wash:   #1B2B3D;
+      --good:        #57B98C;
+      --mid:         #8A94A0;
+      --poor:        #E08B57;
+      --private:     #A99BD8;
+      --private-wash:#242038;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#101822; --surface:#17212E; --ink:#E8EEF5; --ink-soft:#A9B8C8;
+    --ink-faint:#6D7E91; --rule:#2A3846; --sign:#5FA8E8; --sign-deep:#A9CFF0;
+    --sign-wash:#1B2B3D; --good:#57B98C; --mid:#8A94A0; --poor:#E08B57;
+    --private:#A99BD8; --private-wash:#242038;
+  }
+  :root[data-theme="light"] {
+    --ground:#F5F7F9; --surface:#FFFFFF; --ink:#12233A; --ink-soft:#4A5C72;
+    --ink-faint:#8494A6; --rule:#DDE3EA; --sign:#1B6FC4; --sign-deep:#12314F;
+    --sign-wash:#E9F1FA; --good:#2F7D5B; --mid:#8A94A0; --poor:#C4622D;
+    --private:#5B4B8A; --private-wash:#EFECF7;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .demo-bar {
+    background: var(--sign-deep);
+    color: #fff;
+    font-size: .74rem;
+    letter-spacing: .06em;
+    text-align: center;
+    padding: 7px var(--s4);
+    line-height: 1.5;
+  }
+  :root[data-theme="dark"] .demo-bar,
+  :root:not([data-theme="light"]) .demo-bar { color: #fff; }
+  @media (prefers-color-scheme: dark) {
+    .demo-bar { background: #0B1520; color: var(--ink-soft); }
+  }
+  :root[data-theme="dark"] .demo-bar { background: #0B1520; color: var(--ink-soft); }
+  :root[data-theme="light"] .demo-bar { background: #12314F; color: #fff; }
+
+  .app {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    min-height: calc(100vh - 30px);
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+  }
+
+  /* ── 路線図型プログレス ───────────── */
+  .rail {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: var(--s4) var(--s5) var(--s3);
+    border-bottom: 1px solid var(--rule);
+  }
+  .rail-line { display: flex; align-items: center; flex: 1; }
+  .rail-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--rule); flex: none;
+    transition: background .2s, transform .2s;
+  }
+  .rail-dot.done { background: var(--sign); }
+  .rail-dot.now  { background: var(--sign); transform: scale(1.6); }
+  .rail-seg { height: 2px; background: var(--rule); flex: 1; }
+  .rail-seg.done { background: var(--sign); }
+  .rail-label {
+    font-size: .72rem; letter-spacing: .08em; color: var(--ink-faint);
+    padding-left: var(--s3); white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .rail-label.opt { color: var(--private); }
+
+  main {
+    flex: 1;
+    padding: var(--s6) var(--s5) var(--s7);
+    animation: rise .28s ease-out;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { main { animation: none; } .rail-dot { transition: none; } }
+
+  .eyebrow {
+    font-size: .74rem; letter-spacing: .14em; color: var(--sign);
+    margin: 0 0 var(--s3); font-weight: 600;
+  }
+  .eyebrow.priv { color: var(--private); }
+  h1 {
+    font-family: var(--f-display);
+    font-size: 1.72rem; line-height: 1.45; letter-spacing: .01em;
+    margin: 0 0 var(--s4); text-wrap: balance; font-weight: 600;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-size: 1.3rem; line-height: 1.55; margin: 0 0 var(--s3);
+    text-wrap: balance; font-weight: 600;
+  }
+  .lede { color: var(--ink-soft); margin: 0 0 var(--s5); font-size: .95rem; }
+  .note { color: var(--ink-faint); font-size: .82rem; line-height: 1.65; margin: var(--s3) 0 0; }
+  .optional-tag {
+    display: inline-block; font-size: .7rem; letter-spacing: .08em;
+    border: 1px solid var(--rule); color: var(--ink-faint);
+    padding: 1px 7px; border-radius: 3px; margin-left: var(--s2);
+    vertical-align: 3px;
+  }
+
+  /* ── 選択肢 ───────────── */
+  .opts { display: flex; flex-direction: column; gap: var(--s2); margin: var(--s4) 0 0; }
+  .opt {
+    display: flex; align-items: flex-start; gap: var(--s3);
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: var(--s3) var(--s4);
+    cursor: pointer; background: var(--surface);
+    transition: border-color .15s, background .15s;
+    font-size: .93rem; line-height: 1.55;
+  }
+  .opt:hover { border-color: var(--sign); }
+  .opt input { margin: 5px 0 0; accent-color: var(--sign); flex: none; }
+  .opt.sel { border-color: var(--sign); background: var(--sign-wash); }
+  .opt:focus-within { outline: 2px solid var(--sign); outline-offset: 2px; }
+
+  /* ── 5軸マトリクス ───────────── */
+  .matrix { display: flex; flex-direction: column; gap: var(--s3); margin-top: var(--s4); }
+  .mrow { border: 1px solid var(--rule); border-radius: 6px; padding: var(--s3) var(--s4) var(--s4); }
+  .mrow.answered { border-color: var(--sign); }
+  .mtitle { font-weight: 600; font-size: .95rem; }
+  .msub { color: var(--ink-faint); font-size: .8rem; line-height: 1.5; margin-bottom: var(--s3); }
+  .mopts { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); }
+  .mbtn {
+    border: 1px solid var(--rule); background: transparent; color: var(--ink-soft);
+    border-radius: 5px; padding: 9px 4px; font: inherit; font-size: .82rem;
+    cursor: pointer; transition: all .15s;
+  }
+  .mbtn:hover { border-color: var(--ink-faint); }
+  .mbtn[data-v="2"].on { background: var(--good); border-color: var(--good); color: #fff; }
+  .mbtn[data-v="1"].on { background: var(--mid);  border-color: var(--mid);  color: #fff; }
+  .mbtn[data-v="0"].on { background: var(--poor); border-color: var(--poor); color: #fff; }
+
+  /* ── 入力 ───────────── */
+  input[type=text], input[type=email], textarea {
+    width: 100%; font: inherit; font-size: 1rem;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: var(--s3) var(--s4);
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--sign); outline-offset: 1px; border-color: var(--sign); }
+  textarea { resize: vertical; min-height: 7.5rem; line-height: 1.7; }
+  .field { margin-top: var(--s4); }
+  .field-label { font-size: .84rem; color: var(--ink-soft); margin-bottom: var(--s2); display: block; }
+  .counter { text-align: right; font-size: .76rem; color: var(--ink-faint); font-variant-numeric: tabular-nums; margin-top: var(--s1); }
+  .counter.over { color: var(--poor); }
+
+  .suggest { position: relative; }
+  .suggest-list {
+    position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 2px);
+    background: var(--surface); border: 1px solid var(--sign); border-radius: 6px;
+    max-height: 15rem; overflow-y: auto; box-shadow: 0 6px 20px rgba(18,35,58,.13);
+  }
+  .suggest-item {
+    padding: 10px var(--s4); cursor: pointer; font-size: .93rem;
+    display: flex; justify-content: space-between; gap: var(--s3);
+    border-bottom: 1px solid var(--rule);
+  }
+  .suggest-item:last-child { border-bottom: 0; }
+  .suggest-item:hover, .suggest-item.cursor { background: var(--sign-wash); }
+  .suggest-meta { color: var(--ink-faint); font-size: .78rem; white-space: nowrap; }
+
+  /* ── 写真 ───────────── */
+  .shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); margin-top: var(--s3); }
+  .shot { position: relative; aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 1px solid var(--rule); }
+  .shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .shot button {
+    position: absolute; top: 4px; right: 4px; width: 24px; height: 24px;
+    border-radius: 50%; border: 0; background: rgba(18,35,58,.78); color: #fff;
+    font-size: 15px; line-height: 1; cursor: pointer;
+  }
+  .drop {
+    border: 1px dashed var(--rule); border-radius: 6px; padding: var(--s5) var(--s4);
+    text-align: center; color: var(--ink-soft); cursor: pointer; font-size: .9rem;
+    background: var(--surface); transition: border-color .15s, background .15s;
+  }
+  .drop:hover { border-color: var(--sign); background: var(--sign-wash); }
+  .drop strong { display: block; color: var(--ink); font-weight: 600; margin-bottom: 2px; }
+
+  .guide { background: var(--sign-wash); border-radius: 6px; padding: var(--s4); margin-top: var(--s4); font-size: .86rem; line-height: 1.75; }
+  .guide ol, .guide ul { margin: var(--s2) 0 0; padding-left: 1.2em; }
+  .guide li { margin-bottom: 3px; }
+  .guide .g-head { font-weight: 600; }
+
+  .consents { display: flex; flex-direction: column; gap: var(--s2); margin-top: var(--s4); }
+  .consent {
+    display: flex; gap: var(--s3); align-items: flex-start;
+    font-size: .86rem; line-height: 1.6; color: var(--ink-soft); cursor: pointer;
+  }
+  .consent input { margin: 4px 0 0; accent-color: var(--sign); flex: none; }
+
+  /* ── 非公開の宣言画面 ───────────── */
+  .private-panel {
+    background: var(--private-wash); border-radius: 8px;
+    padding: var(--s5); border-left: 3px solid var(--private);
+  }
+  .private-panel h1 { color: var(--private); }
+  .lock { font-size: .74rem; letter-spacing: .1em; color: var(--private); font-weight: 600; }
+
+  /* ── フッター ───────────── */
+  footer {
+    position: sticky; bottom: 0;
+    background: var(--surface); border-top: 1px solid var(--rule);
+    padding: var(--s3) var(--s5) var(--s5);
+    display: flex; gap: var(--s3); align-items: center;
+  }
+  .btn {
+    font: inherit; font-size: 1rem; font-weight: 600;
+    border-radius: 6px; padding: 13px var(--s5); cursor: pointer;
+    border: 1px solid var(--sign); background: var(--sign); color: #fff;
+    flex: 1; transition: opacity .15s;
+  }
+  .btn:disabled { opacity: .35; cursor: not-allowed; }
+  .btn.ghost { background: transparent; color: var(--ink-soft); border-color: var(--rule); flex: none; padding: 13px var(--s4); font-weight: 400; }
+  .btn.skip  { background: transparent; color: var(--ink-faint); border-color: transparent; flex: none; padding: 13px var(--s3); font-weight: 400; font-size: .88rem; text-decoration: underline; }
+  .btn:focus-visible { outline: 2px solid var(--sign); outline-offset: 2px; }
+
+  /* ── 結果画面 ───────────── */
+  .result-score {
+    display: flex; align-items: baseline; gap: var(--s3);
+    margin: var(--s5) 0 var(--s4);
+  }
+  .score-num {
+    font-family: var(--f-display); font-size: 3.4rem; line-height: 1;
+    color: var(--sign); font-variant-numeric: tabular-nums; font-weight: 600;
+  }
+  .score-unit { color: var(--ink-faint); font-size: .9rem; }
+  .ranks { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--rule); margin: var(--s4) 0; }
+  .rank-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: var(--s3) 0; border-bottom: 1px solid var(--rule); gap: var(--s3);
+  }
+  .rank-cat { font-size: .88rem; color: var(--ink-soft); }
+  .rank-val { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+  .rank-val em { font-style: normal; font-size: 1.5rem; color: var(--sign); font-family: var(--f-display); }
+  .first-badge {
+    background: var(--sign-deep); color: #fff; border-radius: 8px;
+    padding: var(--s5); text-align: center; margin: var(--s5) 0;
+  }
+  :root[data-theme="dark"] .first-badge, :root:not([data-theme="light"]) .first-badge { color: #fff; }
+  @media (prefers-color-scheme: dark) { .first-badge { background: var(--sign); color: #0B1520; } }
+  :root[data-theme="dark"] .first-badge { background: var(--sign); color: #0B1520; }
+  :root[data-theme="light"] .first-badge { background: #12314F; color: #fff; }
+  .first-badge .fb-lead { font-size: .8rem; letter-spacing: .1em; opacity: .8; }
+  .first-badge .fb-main { font-family: var(--f-display); font-size: 1.35rem; margin-top: var(--s2); }
+
+  .sharebox { background: var(--sign-wash); border-radius: 8px; padding: var(--s4); margin-top: var(--s5); }
+  .sharetext {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 6px;
+    padding: var(--s3) var(--s4); font-size: .86rem; line-height: 1.75;
+    white-space: pre-wrap; margin: var(--s3) 0;
+  }
+  .quote {
+    border-left: 2px solid var(--sign); padding-left: var(--s4);
+    color: var(--ink-soft); font-size: .9rem; margin: var(--s4) 0;
+  }
+  .divider-note { color: var(--ink-faint); font-size: .8rem; text-align: center; margin-top: var(--s6); line-height: 1.7; }
+  .pill {
+    display: inline-block; background: var(--sign-wash); color: var(--sign);
+    font-size: .78rem; padding: 3px 10px; border-radius: 99px; margin: 3px 4px 0 0;
+  }
+</style>
+
+<div class="demo-bar">動作見本（プロトタイプ）｜入力内容はどこにも送信されません</div>
+
+<div class="app">
+  <div class="rail" id="rail"></div>
+  <main id="screen"></main>
+  <footer id="nav"></footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ══ 駅マスタ（サジェスト用・実装時は国土数値情報等に差し替え） ══
+     v = 現在の回答数, R = 現在の平均得点(0-10) — 見本用のダミー値 */
+  var STATIONS = [
+    { n:"東京",       k:"とうきょう",       pref:"東京都", size:"ターミナル", v:41, R:7.8 },
+    { n:"新宿",       k:"しんじゅく",       pref:"東京都", size:"ターミナル", v:38, R:6.2 },
+    { n:"渋谷",       k:"しぶや",           pref:"東京都", size:"ターミナル", v:33, R:5.9 },
+    { n:"品川",       k:"しながわ",         pref:"東京都", size:"ターミナル", v:27, R:8.4 },
+    { n:"池袋",       k:"いけぶくろ",       pref:"東京都", size:"ターミナル", v:24, R:6.7 },
+    { n:"二子玉川",   k:"ふたこたまがわ",   pref:"東京都", size:"中規模",     v:19, R:9.1 },
+    { n:"豊洲",       k:"とよす",           pref:"東京都", size:"中規模",     v:16, R:8.9 },
+    { n:"吉祥寺",     k:"きちじょうじ",     pref:"東京都", size:"中規模",     v:14, R:7.1 },
+    { n:"武蔵小杉",   k:"むさしこすぎ",     pref:"神奈川県", size:"ターミナル", v:21, R:6.4 },
+    { n:"横浜",       k:"よこはま",         pref:"神奈川県", size:"ターミナル", v:29, R:7.5 },
+    { n:"みなとみらい",k:"みなとみらい",    pref:"神奈川県", size:"中規模",     v:17, R:9.3 },
+    { n:"新百合ヶ丘", k:"しんゆりがおか",   pref:"神奈川県", size:"中規模",     v:11, R:8.2 },
+    { n:"たまプラーザ",k:"たまぷらーざ",    pref:"神奈川県", size:"中規模",     v:9,  R:8.8 },
+    { n:"大宮",       k:"おおみや",         pref:"埼玉県", size:"ターミナル", v:18, R:7.0 },
+    { n:"越谷レイクタウン",k:"こしがやれいくたうん",pref:"埼玉県",size:"中規模", v:12, R:9.4 },
+    { n:"船橋",       k:"ふなばし",         pref:"千葉県", size:"ターミナル", v:13, R:6.1 },
+    { n:"海浜幕張",   k:"かいひんまくはり", pref:"千葉県", size:"中規模",     v:10, R:8.6 },
+    { n:"大阪",       k:"おおさか",         pref:"大阪府", size:"ターミナル", v:26, R:7.3 },
+    { n:"天王寺",     k:"てんのうじ",       pref:"大阪府", size:"ターミナル", v:15, R:7.9 },
+    { n:"京都",       k:"きょうと",         pref:"京都府", size:"ターミナル", v:20, R:6.8 },
+    { n:"三宮",       k:"さんのみや",       pref:"兵庫県", size:"ターミナル", v:12, R:7.2 },
+    { n:"名古屋",     k:"なごや",           pref:"愛知県", size:"ターミナル", v:22, R:7.6 },
+    { n:"金山",       k:"かなやま",         pref:"愛知県", size:"中規模",     v:8,  R:8.1 },
+    { n:"仙台",       k:"せんだい",         pref:"宮城県", size:"ターミナル", v:11, R:8.3 },
+    { n:"博多",       k:"はかた",           pref:"福岡県", size:"ターミナル", v:16, R:8.0 },
+    { n:"札幌",       k:"さっぽろ",         pref:"北海道", size:"ターミナル", v:14, R:7.4 }
+  ];
+
+  var M_CONST = 10;  // ベイズ平均の定数
+  var C_MEAN = (function () {
+    var s = 0; for (var i = 0; i < STATIONS.length; i++) s += STATIONS[i].R;
+    return s / STATIONS.length;
+  })();
+
+  /* ══ 選択肢 ══ */
+  /* 評価するのは「駅の構造・設備」だけ。人の対応は再現しないため対象外 */
+  var HELPED = [
+    "改札を出てすぐのところにエレベーターがあった",
+    "エレベーターが広くて、ベビーカーごと余裕で乗れた",
+    "エレベーターが複数あって、待たずに乗れた",
+    "どの出口にもエレベーターがあり、行きたい方向に出られた",
+    "ホームと電車のすき間・段差が小さかった",
+    "ホームドアがあって、安心して待てた",
+    "改札や通路が広く、ベビーカーで通り抜けられた",
+    "おむつ替えができる場所があった",
+    "授乳室・ベビールームがあった",
+    "ベビーカーのまま入れる広いトイレがあった",
+    "座って休める場所があった",
+    "エレベーターの場所を示す案内が、わかりやすかった"
+  ];
+  var TROUBLE = [
+    "エレベーターが改札から遠かった／見つからなかった",
+    "エレベーターが混んでいて、何本も見送った",
+    "エレベーターがなく、階段を上るしかなかった",
+    "ホームと電車のすき間・段差が大きかった",
+    "通路や改札が狭くて通りにくかった",
+    "おむつ替えできる場所がなかった／遠かった",
+    "授乳できる場所がなかった",
+    "座って休める場所がなかった",
+    "案内表示がわからず、迷った",
+    "目的の出口にエレベーターがなく、地上に出られなかった"
+  ];
+  /* 5軸すべて駅の構造・設備・案内設計。人の対応は点数に入れない */
+  var AXES = [
+    { id:"a1", t:"たどりつける", s:"改札からホーム・地上まで、エレベーターで途切れず行けた" },
+    { id:"a2", t:"待たない",     s:"エレベーターの数や広さが足りていた" },
+    { id:"a3", t:"こわくない",   s:"段差・すき間・通路の狭さで、危ない思いをしなかった" },
+    { id:"a4", t:"ひと息つける", s:"おむつ替え・授乳・休憩ができる場所があった" },
+    { id:"a5", t:"迷わない",     s:"エレベーターやベビールームの場所が、案内表示ですぐわかった" }
+  ];
+  var AXIS_OPTS = [
+    { v:2, l:"よかった" }, { v:1, l:"ふつう" }, { v:0, l:"物足りない" }
+  ];
+
+  /* ══ 状態 ══ */
+  var SAVE_KEY = "stroller-station-survey-v1";
+  var state = {
+    q1: null, q2: [], q2b: [], station: "", gate: "",
+    axes: {}, comment: "", recommend: null,
+    consentSite: false, consentPress: false, credit: "",
+    tStation: "", tItems: [], tDetail: "", tFix: "",
+    consentOperator: null,
+    childAge: "", freq: "", prefLive: "", email: "",
+    order: {}
+  };
+  var photos = { good: [], bad: [] };   // File は保存対象外（見本のため）
+  var idx = 0;
+
+  function save() {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify({ state: state, idx: idx })); } catch (e) {}
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+      var d = JSON.parse(raw);
+      if (!d || !d.state) return false;
+      for (var k in d.state) if (Object.prototype.hasOwnProperty.call(state, k)) state[k] = d.state[k];
+      idx = d.idx || 0;
+      return idx > 0;
+    } catch (e) { return false; }
+  }
+  /* サンドボックス内では location.reload() が効かないことがあるため、
+     ストレージ削除＋メモリ上の初期化で確実にやり直せるようにする */
+  function reset() {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+    ["good", "bad"].forEach(function (b) {
+      photos[b].forEach(function (p) { URL.revokeObjectURL(p.url); });
+      photos[b] = [];
+    });
+    state = {
+      q1: null, q2: [], q2b: [], station: "", gate: "",
+      axes: {}, comment: "", recommend: null,
+      consentSite: false, consentPress: false, credit: "",
+      tStation: "", tItems: [], tDetail: "", tFix: "",
+      consentOperator: null,
+      childAge: "", freq: "", prefLive: "", email: "",
+      order: {}
+    };
+    idx = 0;
+    document.querySelector(".demo-bar").textContent =
+      "動作見本（プロトタイプ）｜入力内容はどこにも送信されません";
+    render();
+  }
+
+  /* 表示用の駅名（「駅」が二重にならないように） */
+  function stationLabel(fallback) {
+    var n = state.station.trim().replace(/駅$/, "");
+    return n ? n + "駅" : (fallback || "その駅");
+  }
+
+  /* 選択肢の表示順をランダム化（順序効果を消す）。順序は保存して回答中は固定 */
+  function orderFor(key, len) {
+    if (state.order[key] && state.order[key].length === len) return state.order[key];
+    var a = []; for (var i = 0; i < len; i++) a.push(i);
+    for (var j = a.length - 1; j > 0; j--) {
+      var r = Math.floor(Math.random() * (j + 1)); var t = a[j]; a[j] = a[r]; a[r] = t;
+    }
+    state.order[key] = a; return a;
+  }
+
+  /* ══ フロー ══ */
+  function flow() {
+    var f = ["intro", "q1"];
+    if (state.q1 === "forget") f.push("q2b");
+    else f.push("q2", "q3", "q4", "q5", "q6", "q7");
+    f.push("gap", "q8", "q9", "q10", "q11", "q12", "result");
+    return f;
+  }
+  var REQUIRED = { q1:1, q2:1, q3:1, q4:1, q6:1, q2b:1 };
+  function requiredIds() { return flow().filter(function (s) { return REQUIRED[s]; }); }
+
+  /* ══ 描画ヘルパ ══ */
+  function el(html) { var d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstChild; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]; }); }
+
+  function radioList(items, current, onPick) {
+    var wrap = document.createElement("div"); wrap.className = "opts";
+    items.forEach(function (it) {
+      var lab = el('<label class="opt' + (current === it.v ? " sel" : "") + '">' +
+        '<input type="radio" name="r' + Math.random().toString(36).slice(2) + '"' + (current === it.v ? " checked" : "") + '>' +
+        '<span>' + esc(it.l) + '</span></label>');
+      lab.querySelector("input").addEventListener("change", function () { onPick(it.v); });
+      wrap.appendChild(lab);
+    });
+    return wrap;
+  }
+
+  function checkList(labels, key, selected, onChange) {
+    var wrap = document.createElement("div"); wrap.className = "opts";
+    var ord = orderFor(key, labels.length);
+    ord.forEach(function (i) {
+      var txt = labels[i];
+      var on = selected.indexOf(txt) >= 0;
+      var lab = el('<label class="opt' + (on ? " sel" : "") + '">' +
+        '<input type="checkbox"' + (on ? " checked" : "") + '><span>' + esc(txt) + '</span></label>');
+      lab.querySelector("input").addEventListener("change", function (e) {
+        var p = selected.indexOf(txt);
+        if (e.target.checked) { if (p < 0) selected.push(txt); }
+        else if (p >= 0) selected.splice(p, 1);
+        lab.classList.toggle("sel", e.target.checked);
+        onChange();
+      });
+      wrap.appendChild(lab);
+    });
+    return wrap;
+  }
+
+  function textarea(value, max, ph, onInput) {
+    var box = document.createElement("div"); box.className = "field";
+    var ta = document.createElement("textarea");
+    ta.value = value; ta.placeholder = ph; ta.setAttribute("aria-label", ph);
+    var c = el('<div class="counter"></div>');
+    function upd() { c.textContent = ta.value.length + " / " + max; c.classList.toggle("over", ta.value.length > max); }
+    ta.addEventListener("input", function () { upd(); onInput(ta.value); });
+    upd(); box.appendChild(ta); box.appendChild(c);
+    return box;
+  }
+
+  function photoField(bucket, maxN) {
+    var box = document.createElement("div");
+    var input = document.createElement("input");
+    input.type = "file"; input.accept = "image/*"; input.multiple = true; input.style.display = "none";
+    var drop = el('<div class="drop" tabindex="0" role="button">' +
+      '<strong>写真を選ぶ／その場で撮る</strong>' + maxN + '枚まで・任意です</div>');
+    var grid = el('<div class="shots"></div>');
+
+    function paint() {
+      grid.innerHTML = "";
+      photos[bucket].forEach(function (p, i) {
+        var cell = el('<div class="shot"><img alt="添付した写真 ' + (i + 1) + '"><button type="button" aria-label="この写真を外す">×</button></div>');
+        cell.querySelector("img").src = p.url;
+        cell.querySelector("button").addEventListener("click", function () {
+          URL.revokeObjectURL(p.url); photos[bucket].splice(i, 1); paint(); renderNav();
+        });
+        grid.appendChild(cell);
+      });
+      drop.style.display = photos[bucket].length >= maxN ? "none" : "block";
+    }
+    function take(files) {
+      for (var i = 0; i < files.length && photos[bucket].length < maxN; i++) {
+        if (!/^image\//.test(files[i].type)) continue;
+        photos[bucket].push({ url: URL.createObjectURL(files[i]), name: files[i].name });
+      }
+      paint(); renderNav();
+    }
+    input.addEventListener("change", function () { take(input.files); input.value = ""; });
+    drop.addEventListener("click", function () { input.click(); });
+    drop.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
+
+    box.appendChild(input); box.appendChild(grid); box.appendChild(drop);
+    paint();
+    return box;
+  }
+
+  function consent(label, checked, onChange) {
+    var lab = el('<label class="consent"><input type="checkbox"' + (checked ? " checked" : "") + '><span>' + esc(label) + '</span></label>');
+    lab.querySelector("input").addEventListener("change", function (e) { onChange(e.target.checked); });
+    return lab;
+  }
+
+  /* ══ 駅名サジェスト ══ */
+  function stationField(value, onPick) {
+    var wrap = el('<div class="suggest"></div>');
+    var inp = document.createElement("input");
+    inp.type = "text"; inp.value = value; inp.placeholder = "駅名を入力（例：にこたま、豊洲）";
+    inp.setAttribute("aria-label", "駅名");
+    inp.autocomplete = "off";
+    var list = null, cursor = -1, matches = [];
+
+    function close() { if (list) { list.remove(); list = null; } cursor = -1; }
+    function open(q) {
+      close();
+      if (!q) return;
+      matches = STATIONS.filter(function (s) {
+        return s.n.indexOf(q) >= 0 || s.k.indexOf(q) >= 0;
+      }).slice(0, 8);
+      if (!matches.length) return;
+      list = el('<div class="suggest-list" role="listbox"></div>');
+      matches.forEach(function (s, i) {
+        var it = el('<div class="suggest-item" role="option"><span>' + esc(s.n) + '駅</span>' +
+          '<span class="suggest-meta">' + esc(s.pref) + '・' + esc(s.size) + '</span></div>');
+        it.addEventListener("mousedown", function (e) { e.preventDefault(); choose(i); });
+        list.appendChild(it);
+      });
+      wrap.appendChild(list);
+    }
+    function choose(i) { inp.value = matches[i].n; onPick(matches[i].n); close(); renderNav(); }
+
+    inp.addEventListener("input", function () { onPick(inp.value.trim()); open(inp.value.trim()); renderNav(); });
+    inp.addEventListener("keydown", function (e) {
+      if (!list) return;
+      var items = list.querySelectorAll(".suggest-item");
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        cursor += (e.key === "ArrowDown" ? 1 : -1);
+        if (cursor < 0) cursor = items.length - 1;
+        if (cursor >= items.length) cursor = 0;
+        for (var i = 0; i < items.length; i++) items[i].classList.toggle("cursor", i === cursor);
+      } else if (e.key === "Enter" && cursor >= 0) { e.preventDefault(); choose(cursor); }
+      else if (e.key === "Escape") close();
+    });
+    inp.addEventListener("blur", function () { setTimeout(close, 120); });
+    wrap.appendChild(inp);
+    return wrap;
+  }
+
+  /* ══ スコア計算 ══ */
+  function userScore() {
+    var s = 0, n = 0;
+    AXES.forEach(function (a) { if (typeof state.axes[a.id] === "number") { s += state.axes[a.id]; n++; } });
+    return { total: s, answered: n };
+  }
+  function bayes(v, R) { return (v * R + M_CONST * C_MEAN) / (v + M_CONST); }
+
+  function computeResult() {
+    var sc = userScore().total;
+    var name = state.station.replace(/駅$/, "");
+    var pool = STATIONS.map(function (s) { return { n:s.n, pref:s.pref, size:s.size, v:s.v, R:s.R }; });
+    var me = null;
+    for (var i = 0; i < pool.length; i++) if (pool[i].n === name) me = pool[i];
+    var isFirst = false;
+    if (me) { me.R = (me.R * me.v + sc) / (me.v + 1); me.v += 1; }
+    else { isFirst = true; me = { n:name, pref:"あなたの地域", size:"中規模", v:1, R:sc }; pool.push(me); }
+    pool.forEach(function (s) { s.S = bayes(s.v, s.R); });
+    var sorted = pool.slice().sort(function (a, b) { return b.S - a.S; });
+    function rankIn(filter) {
+      var f = sorted.filter(filter);
+      for (var i = 0; i < f.length; i++) if (f[i] === me) return { r: i + 1, n: f.length };
+      return null;
+    }
+    return {
+      isFirst: isFirst, me: me, score: sc,
+      national: rankIn(function () { return true; }),
+      byPref:   rankIn(function (s) { return s.pref === me.pref; }),
+      bySize:   rankIn(function (s) { return s.size === me.size; })
+    };
+  }
+
+  /* ══ 画面 ══ */
+  var SCREENS = {
+
+    intro: function () {
+      var w = document.createElement("div");
+      w.appendChild(el('<p class="eyebrow">ベビーカーで行ける駅ランキング</p>'));
+      w.appendChild(el('<h1>ベビーカーで、行けた駅。</h1>'));
+      w.appendChild(el('<p class="lede">「あの駅、助かった」を全国から集めて、ランキングをつくります。<br>' +
+        '評価するのは<strong>駅の設備と構造</strong>だけ。あなたの1票が、明日そこを通る親子の道案内になります。</p>'));
+      w.appendChild(el('<div class="guide"><span class="g-head">お答えいただくこと</span>' +
+        '<ul><li>よかった駅を<strong>1駅だけ</strong>（必須5問・約90秒）</li>' +
+        '<li>写真があれば1枚（任意）</li>' +
+        '<li>困った駅も、よければ（任意・<strong>公開しません</strong>）</li></ul></div>'));
+      w.appendChild(el('<p class="note">匿名でお答えいただけます。途中でやめても、そこまでの内容は残ります。<br>' +
+        '駅を責めるための調査ではありません。よい駅を広めるための調査です。</p>'));
+      return w;
+    },
+
+    q1: function () {
+      var w = document.createElement("div");
+      w.appendChild(el('<p class="eyebrow">質問 1</p>'));
+      w.appendChild(el('<h1>ベビーカーで駅を使っていて、「この駅、助かった」と感じたことはありますか？</h1>'));
+      w.appendChild(radioList([
+        { v:"yes",    l:"ある" },
+        { v:"partial",l:"駅全体というより、特定の設備に助けられたことがある" },
+        { v:"forget", l:"思い出せない" }
+      ], state.q1, function (v) {
+        if (state.q1 !== v) {
+          state.q1 = v;
+          idx = flow().indexOf("q1");   // 回答変更で画面数が変わるため、現在地を取り直す
+          save(); render();
+        }
+      }));
+      w.appendChild(el('<p class="note">「思い出せない」を選んだ方には、別の質問をお出しします。</p>'));
+      return w;
+    },
+
+    q2: function () {
+      var w = document.createElement("div");
+      w.appendChild(el('<p class="eyebrow">質問 2</p>'));
+      w.appendChild(el('<h1>どんなことが「助かった」ですか？</h1>'));
+      w.appendChild(el('<p class="lede">あてはまるものすべてを選んでください。<br>' +
+        '<span class="note" style="margin:0">この調査で評価するのは<strong>駅の設備と構造だけ</strong>です。' +
+        '人の対応はその日によって変わってしまうため、点数には入れていません。</span></p>'));
+      w.appendChild(checkList(HELPED, "q2", state.q2, function () { save(); renderNav(); }));
+      return w;
+    },
+
+    q2b: function () {
+      var w = document.createElement("div");
+      w.appendChild(el('<p class="eyebrow">質問 2</p>'));
+      w.appendChild(el('<h1>駅名は思い出せなくて大丈夫です。<br>駅に「これがあったら助かる」ものはどれですか？</h1>'));
+      w.appendChild(el('<p class="lede">あてはまるものすべてを選んでください。鉄道会社への要望としてお届けします。</p>'));
+      w.appendChild(checkList(HELPED, "q2b", state.q2b, function () { save(); renderNav(); }));
+      return w;
+    },
+
+    q3: function () {
+      var w = document.createElement("div");
+      w.appendChild(el('<p class="eyebrow">質問 3</p>'));
+      w.appendChild(el('<h1>その駅を教えてください。</h1>'));
+      w.appendChild(el('<p class="lede">いちばん印象に残っている <strong>1駅だけ</strong> で大丈夫です。</p>'));
+      w.appendChild(stationField(state.station, function (v) { state.station = v; save(); }));
+      var f = el('<div class="field"><span class="field-label">どの改札・どの路線でしたか？<span class="optional-tag">任意</span></span></div>');
+      var g = document.createElement("input");
+      g.type = "text"; g.value = state.gate; g.placeholder = "例：南口改札、JR線側";
+      g.setAttribute("aria-label", "改札・路線");
+      g.addEventListener("input", function () { state.gate = g.value; save(); });
+      f.appendChild(g); w.appendChild(f);
+      w.appendChild(el('<p class="note">大きな駅は会社や改札ごとに使いやすさが違います。わかる範囲で教えていただけると、その場所を運営する会社に正確にお届けできます。</p>'));
+      return w;
+    },
+
+    q4: function () {
+      var w = document.createElement("div");
+      w.appendChild(el('<p class="eyebrow">質問 4</p>'));
+      w.appendChild(el('<h1>' + esc(stationLabel()) + 'は、ベビーカーで使ってみてどうでしたか？</h1>'));
+      w.appendChild(el('<p class="lede">5つの項目それぞれについて、いちばん近いものを選んでください。</p>'));
+      var m = el('<div class="matrix"></div>');
+      AXES.forEach(function (a) {
+        var row = el('<div class="mrow' + (typeof state.axes[a.id] === "number" ? " answered" : "") + '">' +
+          '<div class="mtitle">' + esc(a.t) + '</div><div class="msub">' + esc(a.s) + '</div></div>');
+        var opts = el('<div class="mopts" role="group" aria-label="' + esc(a.t) + '"></div>');
+        AXIS_OPTS.forEach(function (o) {
+          var b = el('<button type="button" class="mbtn' + (state.axes[a.id] === o.v ? " on" : "") + '" data-v="' + o.v + '">' + o.l + '</button>');
+          b.addEventListener("click", function () {
+            state.axes[a.id] = o.v; save();
+            opts.querySelectorAll(".mbtn").forEach(function (x) { x.classList.remove("on"); });
+            b.classList.add("on"); row.classList.add("answered"); renderNav();
+          });
+          opts.appendChild(b);
+        });
+        row.appendChild(opts); m.appendChild(row);
+      });
+      w.appendChild(m);
+      return w;
+    },
+
+    q5: function () {
+      var w = document.createElement("div");
+      w.appendChild(el('<p class="eyebrow">質問 5<span class="optional-tag">任意</span></p>'));
+      w.appendChild(el('<h1>これから' + esc(stationLabel()) + 'を使う親子に、ひとことお願いします。</h1>'));
+      w.appendChild(el('<p class="lede">いただいた言葉は、この駅のページに<strong>そのまま掲載されます</strong>。</p>'));
+      w.appendChild(textarea(state.comment, 120,
+        "例）南口のエレベーターは改札を出てすぐ。ベビールームは3階で、ソファもあるのでゆっくり授乳できました。",
+        function (v) { state.comment = v; save(); }));
+      return w;
+    },
+
+    q6: function () {
+      var w = document.createElement("div");
+      w.appendChild(el('<p class="eyebrow">質問 6</p>'));
+      w.appendChild(el('<h1>この駅を、ほかの親子にすすめたいですか？</h1>'));
+      w.appendChild(radioList([
+        { v:"strong", l:"ぜひすすめたい" },
+        { v:"mild",   l:"まあすすめられる" },
+        { v:"neutral",l:"どちらでもない" }
+      ], state.recommend, function (v) { state.recommend = v; save(); renderNav(); }));
+      return w;
+    },
+
+    q7: function () {
+      var w = document.createElement("div");
+      w.appendChild(el('<p class="eyebrow">質問 7<span class="optional-tag">任意</span></p>'));
+      w.appendChild(el('<h1>「助かったところ」の写真があれば、ぜひ見せてください。</h1>'));
+      w.appendChild(el('<p class="lede">1枚でも大歓迎です。あとから追加することもできます。</p>'));
+      w.appendChild(photoField("good", 3));
+      w.appendChild(el('<div class="guide"><span class="g-head">撮ってほしいのはこの3つです</span>' +
+        '<ol><li>エレベーターの場所がわかる引きの写真（改札やホームとの位置関係が写っていると最高です）</li>' +
+        '<li>ベビールーム・おむつ替え台</li>' +
+        '<li>改札からの動線（通路の広さ、案内表示など）</li></ol></div>'));
+      w.appendChild(el('<div class="guide" style="background:transparent;border:1px solid var(--rule)">' +
+        '<span class="g-head">撮影のお願い</span><ul>' +
+        '<li><strong>人が写らないように</strong>お願いします。お子さんやご自身が写っている写真は掲載できません。</li>' +
+        '<li>駅係員の方の顔が写らないようご配慮ください。</li>' +
+        '<li>通行の妨げにならない場所から撮影してください。</li>' +
+        '<li>写真に含まれる<strong>位置情報は、受け取った時点で自動的に削除</strong>しています。</li></ul></div>'));
+      var cs = el('<div class="consents"></div>');
+      cs.appendChild(consent("この写真を、駅のページに掲載することに同意します", state.consentSite, function (v) { state.consentSite = v; save(); }));
+      cs.appendChild(consent("受賞発表やニュース記事など、企画の紹介のために使われることにも同意します", state.consentPress, function (v) { state.consentPress = v; save(); }));
+      w.appendChild(cs);
+      var f = el('<div class="field"><span class="field-label">お名前の表示（撮影クレジット）<span class="optional-tag">任意</span></span></div>');
+      var ci = document.createElement("input");
+      ci.type = "text"; ci.value = state.credit; ci.placeholder = "例：みかん　※空欄なら表示しません";
+      ci.setAttribute("aria-label", "撮影クレジット");
+      ci.addEventListener("input", function () { state.credit = ci.value; save(); });
+      f.appendChild(ci); w.appendChild(f);
+      return w;
+    },
+
+    gap: function () {
+      var w = document.createElement("div");
+      var p = el('<div class="private-panel"></div>');
+      p.appendChild(el('<p class="lock">ここから先は公開されません</p>'));
+      p.appendChild(el('<h1>困った駅のことも、聞かせてください。</h1>'));
+      p.appendChild(el('<p class="lede" style="margin-bottom:0">このランキングは「よかった駅」を伝える企画です。<br>' +
+        '困った場所の駅名を、私たちが公開することは<strong>ありません</strong>。<br><br>' +
+        'いただいた内容は、その駅を運営する鉄道会社に<strong>匿名でお届けする改善リクエスト</strong>としてだけ使います。' +
+        'どこがだめかを広めるより、直してもらうほうが、次に来る親子の役に立つと考えているからです。</p>'));
+      w.appendChild(p);
+      w.appendChild(el('<p class="note">ここから先はすべて任意です。答えずに終えていただいても、ここまでの回答は記録されています。</p>'));
+      return w;
+    },
+
+    q8: function () {
+      var w = document.createElement("div");
+      w.appendChild(el('<p class="eyebrow priv">質問 8<span class="optional-tag">任意・非公開</span></p>'));
+      w.appendChild(el('<h1>ベビーカーで困った駅があれば、教えてください。</h1>'));
+      w.appendChild(stationField(state.tStation, function (v) { state.tStation = v; save(); }));
+      w.appendChild(el('<p class="field-label" style="margin-top:24px">どんなことに困りましたか？（あてはまるものすべて）</p>'));
+      w.appendChild(checkList(TROUBLE, "q8", state.tItems, function () { save(); }));
+      w.appendChild(textarea(state.tDetail, 200, "具体的に教えてください（任意）", function (v) { state.tDetail = v; save(); }));
+      w.appendChild(el('<p class="note">駅係員の方など、特定の方についての記述はご遠慮ください。</p>'));
+      return w;
+    },
+
+    q9: function () {
+      var w = document.createElement("div");
+      w.appendChild(el('<p class="eyebrow priv">質問 9<span class="optional-tag">任意・非公開</span></p>'));
+      w.appendChild(el('<h1>「ここだけ直れば行けるのに」という点を、ひとつだけ挙げるとしたら？</h1>'));
+      w.appendChild(el('<p class="lede">いちばん困っている1点だけで大丈夫です。鉄道会社にそのままお届けします。</p>'));
+      w.appendChild(textarea(state.tFix, 80, "例）ホーム端のエレベーターがもう1基あれば、朝でも乗れます。", function (v) { state.tFix = v; save(); }));
+      return w;
+    },
+
+    q10: function () {
+      var w = document.createElement("div");
+      w.appendChild(el('<p class="eyebrow priv">質問 10<span class="optional-tag">任意・非公開</span></p>'));
+      w.appendChild(el('<h1>困った場所の写真があれば、添付してください。</h1>'));
+      w.appendChild(el('<p class="lede">この写真は<strong>公開されません</strong>。「この段差です」の1枚が、文章10件よりも改善を動かします。</p>'));
+      w.appendChild(photoField("bad", 3));
+      var cs = el('<div class="consents"></div>');
+      cs.appendChild(consent("この写真を、該当する鉄道会社に匿名で提供することに同意します", state.consentOperator === true, function (v) { state.consentOperator = v ? true : null; save(); render(); }));
+      cs.appendChild(consent("提供せず、運営の改善検討のみに使ってください", state.consentOperator === false, function (v) { state.consentOperator = v ? false : null; save(); render(); }));
+      w.appendChild(cs);
+      w.appendChild(el('<p class="note">写真は場所が特定できるため、<strong>公開・報道には一切使用しません</strong>。</p>'));
+      return w;
+    },
+
+    q11: function () {
+      var w = document.createElement("div");
+      w.appendChild(el('<p class="eyebrow">質問 11<span class="optional-tag">すべて任意</span></p>'));
+      w.appendChild(el('<h1>さしつかえなければ、あなたのことも。</h1>'));
+      [["childAge","お子さんの年齢","例：1歳と4歳"],
+       ["freq","ベビーカーでの電車利用","例：週に2回くらい"],
+       ["prefLive","お住まいの都道府県","例：神奈川県"]].forEach(function (t) {
+        var f = el('<div class="field"><span class="field-label">' + t[1] + '</span></div>');
+        var i = document.createElement("input");
+        i.type = "text"; i.value = state[t[0]]; i.placeholder = t[2];
+        i.setAttribute("aria-label", t[1]);
+        i.addEventListener("input", function () { state[t[0]] = i.value; save(); });
+        f.appendChild(i); w.appendChild(f);
+      });
+      return w;
+    },
+
+    q12: function () {
+      var w = document.createElement("div");
+      w.appendChild(el('<p class="eyebrow">質問 12<span class="optional-tag">任意</span></p>'));
+      w.appendChild(el('<h1>ランキングができたら、お知らせしますか？</h1>'));
+      w.appendChild(el('<p class="lede">写真をあとから追加したいときのご案内もお送りします。ほかの用途には使いません。</p>'));
+      var f = el('<div class="field"></div>');
+      var i = document.createElement("input");
+      i.type = "email"; i.value = state.email; i.placeholder = "メールアドレス";
+      i.setAttribute("aria-label", "メールアドレス");
+      i.addEventListener("input", function () { state.email = i.value; save(); });
+      f.appendChild(i); w.appendChild(f);
+      return w;
+    },
+
+    result: function () {
+      var w = document.createElement("div");
+      if (state.q1 === "forget") {
+        w.appendChild(el('<p class="eyebrow">ありがとうございました</p>'));
+        w.appendChild(el('<h1>あなたの「あったら助かる」は、<br>要望として記録されました。</h1>'));
+        var tags = el('<div style="margin-top:16px"></div>');
+        (state.q2b.length ? state.q2b : ["（未選択）"]).forEach(function (t) {
+          tags.appendChild(el('<span class="pill">' + esc(t) + '</span>'));
+        });
+        w.appendChild(tags);
+        w.appendChild(el('<p class="note" style="margin-top:24px">同じ声が集まった項目から、鉄道会社にお届けしていきます。<br>よかった駅を思い出したら、いつでも投票してください。</p>'));
+        w.appendChild(restartBtn());
+        return w;
+      }
+
+      var r = computeResult();
+      w.appendChild(el('<p class="eyebrow">ありがとうございました</p>'));
+
+      if (r.isFirst) {
+        w.appendChild(el('<h1>' + esc(r.me.n) + '駅のページは、<br>あなたの言葉から始まりました。</h1>'));
+        w.appendChild(el('<div class="first-badge"><div class="fb-lead">FIRST REVIEWER</div>' +
+          '<div class="fb-main">あなたは ' + esc(r.me.n) + '駅の<br>第1号の推薦者です</div></div>'));
+      } else {
+        w.appendChild(el('<h1>あなたの1票で、<br>' + esc(r.me.n) + '駅の点数が動きました。</h1>'));
+      }
+
+      w.appendChild(el('<div class="result-score"><span class="score-num">' +
+        r.me.S.toFixed(2) + '</span><span class="score-unit">点 ／ 10点満点<br>（あなたの採点は ' + r.score + ' 点）</span></div>'));
+
+      var ranks = el('<div class="ranks"></div>');
+      function row(cat, rk) {
+        if (!rk) return;
+        ranks.appendChild(el('<div class="rank-row"><span class="rank-cat">' + esc(cat) + '</span>' +
+          '<span class="rank-val"><em>' + rk.r + '</em> 位 / ' + rk.n + '駅</span></div>'));
+      }
+      row("全国", r.national);
+      row(r.me.pref + "内", r.byPref);
+      row(r.me.size + "駅部門", r.bySize);
+      w.appendChild(ranks);
+
+      if (r.isFirst) {
+        w.appendChild(el('<p class="note">まだ回答が1件のため、順位は暫定です。' +
+          'あと2人が投票すると「隠れた名駅」枠に、10人でランキングに正式掲載されます。</p>'));
+      } else {
+        w.appendChild(el('<p class="note">順位は、回答が少ない駅が偏って上位に来ないよう補正して計算しています' +
+          '（ベイズ平均・定数m=' + M_CONST + '／全体平均C=' + C_MEAN.toFixed(2) + '）。</p>'));
+      }
+
+      if (state.q2.length) {
+        w.appendChild(el('<p class="field-label" style="margin-top:28px">あなたが選んだ推しポイント</p>'));
+        var tg = document.createElement("div");
+        state.q2.slice(0, 4).forEach(function (t) { tg.appendChild(el('<span class="pill">' + esc(t) + '</span>')); });
+        w.appendChild(tg);
+      }
+      if (state.comment.trim()) {
+        w.appendChild(el('<p class="field-label" style="margin-top:28px">駅のページに掲載されました</p>'));
+        w.appendChild(el('<blockquote class="quote">' + esc(state.comment) + '</blockquote>'));
+      }
+      if (photos.good.length) {
+        w.appendChild(el('<p class="field-label" style="margin-top:28px">添付した写真（' + photos.good.length + '枚）</p>'));
+        var g = el('<div class="shots"></div>');
+        photos.good.forEach(function (p, i) {
+          var c = el('<div class="shot"><img alt="添付した写真 ' + (i + 1) + '"></div>');
+          c.querySelector("img").src = p.url; g.appendChild(c);
+        });
+        w.appendChild(g);
+      } else {
+        w.appendChild(el('<p class="note" style="margin-top:24px">写真はまだありません。次にこの駅へ行ったとき、' +
+          'このページから追加できます。<br>（本番ではこの完了画面に、あなた専用のURLが発行されます）</p>'));
+      }
+
+      var share = el('<div class="sharebox"></div>');
+      share.appendChild(el('<p class="field-label" style="margin-bottom:0">この駅を応援する投稿</p>'));
+      var txt = "ベビーカーで行けた駅、投票してきました。\n" +
+        "わたしの推しは " + r.me.n + "駅。" + (state.q2[0] ? state.q2[0].replace(/。$/, "") + "。\n" : "\n") +
+        (r.isFirst ? "まだ誰も投票していなかったので、第1号になりました。\n"
+                   : "いま" + r.me.pref + "で" + (r.byPref ? r.byPref.r : "-") + "位。もっと上がってほしい。\n") +
+        "#ベビーカーで行けた駅";
+      var pre = el('<div class="sharetext"></div>'); pre.textContent = txt;
+      share.appendChild(pre);
+      var cb = el('<button type="button" class="btn" style="width:100%">この文をコピー</button>');
+      cb.addEventListener("click", function () {
+        function done() { cb.textContent = "コピーしました"; setTimeout(function () { cb.textContent = "この文をコピー"; }, 1800); }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(txt).then(done, fallback);
+        } else fallback();
+        function fallback() {
+          var ta = document.createElement("textarea"); ta.value = txt;
+          ta.style.position = "fixed"; ta.style.opacity = "0";
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand("copy"); done(); } catch (e) { cb.textContent = "コピーできませんでした"; }
+          ta.remove();
+        }
+      });
+      share.appendChild(cb);
+      w.appendChild(share);
+      w.appendChild(restartBtn());
+      return w;
+    }
+  };
+
+  function restartBtn() {
+    var d = el('<p class="divider-note">これは動作見本です。実際の回答は保存・送信されていません。<br></p>');
+    var b = el('<button type="button" class="btn ghost" style="margin-top:12px">最初からやり直す</button>');
+    b.addEventListener("click", reset);
+    d.appendChild(b);
+    return d;
+  }
+
+  /* ══ バリデーション ══ */
+  function canAdvance() {
+    var id = flow()[idx];
+    if (id === "q1")  return !!state.q1;
+    if (id === "q2")  return state.q2.length > 0;
+    if (id === "q2b") return state.q2b.length > 0;
+    if (id === "q3")  return state.station.trim().length > 0;
+    if (id === "q4")  return userScore().answered === AXES.length;
+    if (id === "q6")  return !!state.recommend;
+    return true;
+  }
+  function isOptional(id) { return !REQUIRED[id] && id !== "intro" && id !== "gap" && id !== "result"; }
+
+  /* ══ ナビ・レール ══ */
+  function renderRail() {
+    var rail = document.getElementById("rail");
+    var f = flow(), id = f[idx];
+    var req = requiredIds();
+    rail.innerHTML = "";
+    if (id === "result") { rail.style.display = "none"; return; }
+    rail.style.display = "flex";
+    var line = el('<div class="rail-line"></div>');
+    var pos = req.indexOf(id);
+    var passedAll = idx > f.indexOf(req[req.length - 1]);
+    req.forEach(function (rid, i) {
+      var done = passedAll || (pos >= 0 ? i < pos : f.indexOf(rid) < idx);
+      var now = rid === id;
+      line.appendChild(el('<span class="rail-dot' + (now ? " now" : done ? " done" : "") + '"></span>'));
+      if (i < req.length - 1) line.appendChild(el('<span class="rail-seg' + ((done || now) ? " done" : "") + '"></span>'));
+    });
+    rail.appendChild(line);
+    if (id === "intro") rail.appendChild(el('<span class="rail-label">必須 ' + req.length + ' 問・約90秒</span>'));
+    else if (pos >= 0) rail.appendChild(el('<span class="rail-label">あと ' + (req.length - pos) + ' 問</span>'));
+    else rail.appendChild(el('<span class="rail-label opt">ここからは任意</span>'));
+  }
+
+  function renderNav() {
+    var nav = document.getElementById("nav");
+    var f = flow(), id = f[idx];
+    nav.innerHTML = "";
+    if (id === "result") { nav.style.display = "none"; return; }
+    nav.style.display = "flex";
+
+    if (idx > 0) {
+      var back = el('<button type="button" class="btn ghost">戻る</button>');
+      back.addEventListener("click", function () { idx--; save(); render(); });
+      nav.appendChild(back);
+    }
+    var label = id === "intro" ? "はじめる"
+      : id === "gap" ? "答える"
+      : f[idx + 1] === "result" ? "回答を終える" : "次へ";
+    var next = el('<button type="button" class="btn">' + label + '</button>');
+    next.disabled = !canAdvance();
+    next.addEventListener("click", function () { if (canAdvance()) { idx++; save(); render(); } });
+    nav.appendChild(next);
+
+    if (isOptional(id)) {
+      var skip = el('<button type="button" class="btn skip">とばす</button>');
+      skip.addEventListener("click", function () { idx++; save(); render(); });
+      nav.appendChild(skip);
+    }
+    if (id === "gap") {
+      var end = el('<button type="button" class="btn skip">ここで終える</button>');
+      end.addEventListener("click", function () { idx = f.indexOf("result"); save(); render(); });
+      nav.appendChild(end);
+    }
+  }
+
+  function render() {
+    var f = flow();
+    if (idx >= f.length) idx = f.length - 1;
+    if (idx < 0) idx = 0;
+    var id = f[idx];
+    var main = document.getElementById("screen");
+    main.innerHTML = "";
+    main.appendChild(SCREENS[id]());
+    renderRail(); renderNav();
+    window.scrollTo(0, 0);
+    var h = main.querySelector("h1");
+    if (h) { h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true }); }
+  }
+
+  var resumed = load();
+  render();
+  if (resumed) {
+    var bar = document.querySelector(".demo-bar");
+    bar.textContent = "前回の続きから再開しました（写真は見本のため保存されません）";
+  }
+})();
+</script>
