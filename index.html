@@ -263,34 +263,35 @@
   .btn.skip  { background: transparent; color: var(--ink-faint); border-color: transparent; flex: none; padding: 13px var(--s3); font-weight: 400; font-size: .88rem; text-decoration: underline; }
   .btn:focus-visible { outline: 2px solid var(--sign); outline-offset: 2px; }
 
-  /* ── 結果画面 ───────────── */
-  .result-score {
-    display: flex; align-items: baseline; gap: var(--s3);
-    margin: var(--s5) 0 var(--s4);
+  /* ── 完了画面 ───────────── */
+  .closing {
+    background: var(--sign-wash); border-radius: 8px;
+    padding: var(--s4) var(--s5); margin: var(--s5) 0 0;
+    font-size: .9rem; line-height: 1.8;
   }
-  .score-num {
-    font-family: var(--f-display); font-size: 3.4rem; line-height: 1;
-    color: var(--sign); font-variant-numeric: tabular-nums; font-weight: 600;
+  .closing p { margin: 0; }
+  .closing-lead {
+    font-family: var(--f-display); font-size: 1.05rem;
+    color: var(--sign); margin-bottom: var(--s2) !important; font-weight: 600;
   }
-  .score-unit { color: var(--ink-faint); font-size: .9rem; }
-  .ranks { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--rule); margin: var(--s4) 0; }
-  .rank-row {
-    display: flex; justify-content: space-between; align-items: baseline;
-    padding: var(--s3) 0; border-bottom: 1px solid var(--rule); gap: var(--s3);
+  .afterlist {
+    margin: var(--s3) 0 0; padding: 0; list-style: none;
+    counter-reset: step; display: flex; flex-direction: column; gap: var(--s3);
   }
-  .rank-cat { font-size: .88rem; color: var(--ink-soft); }
-  .rank-val { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
-  .rank-val em { font-style: normal; font-size: 1.5rem; color: var(--sign); font-family: var(--f-display); }
-  .first-badge {
-    background: var(--sign-deep); color: #fff; border-radius: 8px;
-    padding: var(--s5); text-align: center; margin: var(--s5) 0;
+  .afterlist li {
+    counter-increment: step; position: relative; padding-left: 2.1rem;
+    font-size: .92rem; line-height: 1.7;
   }
-  :root[data-theme="dark"] .first-badge, :root:not([data-theme="light"]) .first-badge { color: #fff; }
-  @media (prefers-color-scheme: dark) { .first-badge { background: var(--sign); color: #0B1520; } }
-  :root[data-theme="dark"] .first-badge { background: var(--sign); color: #0B1520; }
-  :root[data-theme="light"] .first-badge { background: #12314F; color: #fff; }
-  .first-badge .fb-lead { font-size: .8rem; letter-spacing: .1em; opacity: .8; }
-  .first-badge .fb-main { font-family: var(--f-display); font-size: 1.35rem; margin-top: var(--s2); }
+  .afterlist li::before {
+    content: counter(step); position: absolute; left: 0; top: .15rem;
+    width: 1.5rem; height: 1.5rem; border-radius: 50%;
+    background: var(--sign); color: #fff;
+    font-size: .78rem; font-variant-numeric: tabular-nums;
+    display: flex; align-items: center; justify-content: center;
+  }
+  @media (prefers-color-scheme: dark) { .afterlist li::before { color: #0B1520; } }
+  :root[data-theme="dark"] .afterlist li::before { color: #0B1520; }
+  :root[data-theme="light"] .afterlist li::before { color: #fff; }
 
   .sharebox { background: var(--sign-wash); border-radius: 8px; padding: var(--s4); margin-top: var(--s5); }
   .sharetext {
@@ -352,11 +353,6 @@
     { n:"札幌",       k:"さっぽろ",         pref:"北海道", size:"ターミナル", v:14, R:7.4 }
   ];
 
-  var M_CONST = 10;  // ベイズ平均の定数
-  var C_MEAN = (function () {
-    var s = 0; for (var i = 0; i < STATIONS.length; i++) s += STATIONS[i].R;
-    return s / STATIONS.length;
-  })();
 
   /* ══ 選択肢 ══ */
   /* 評価するのは「駅の構造・設備」だけ。人の対応は再現しないため対象外 */
@@ -612,36 +608,12 @@
     return wrap;
   }
 
-  /* ══ スコア計算 ══ */
+  /* ══ 回答の充足チェック ══
+     点数の集計は運営側でまとめて行う。回答者には順位も点数も返さない。 */
   function userScore() {
-    var s = 0, n = 0;
-    AXES.forEach(function (a) { if (typeof state.axes[a.id] === "number") { s += state.axes[a.id]; n++; } });
-    return { total: s, answered: n };
-  }
-  function bayes(v, R) { return (v * R + M_CONST * C_MEAN) / (v + M_CONST); }
-
-  function computeResult() {
-    var sc = userScore().total;
-    var name = state.station.replace(/駅$/, "");
-    var pool = STATIONS.map(function (s) { return { n:s.n, pref:s.pref, size:s.size, v:s.v, R:s.R }; });
-    var me = null;
-    for (var i = 0; i < pool.length; i++) if (pool[i].n === name) me = pool[i];
-    var isFirst = false;
-    if (me) { me.R = (me.R * me.v + sc) / (me.v + 1); me.v += 1; }
-    else { isFirst = true; me = { n:name, pref:"あなたの地域", size:"中規模", v:1, R:sc }; pool.push(me); }
-    pool.forEach(function (s) { s.S = bayes(s.v, s.R); });
-    var sorted = pool.slice().sort(function (a, b) { return b.S - a.S; });
-    function rankIn(filter) {
-      var f = sorted.filter(filter);
-      for (var i = 0; i < f.length; i++) if (f[i] === me) return { r: i + 1, n: f.length };
-      return null;
-    }
-    return {
-      isFirst: isFirst, me: me, score: sc,
-      national: rankIn(function () { return true; }),
-      byPref:   rankIn(function (s) { return s.pref === me.pref; }),
-      bySize:   rankIn(function (s) { return s.size === me.size; })
-    };
+    var n = 0;
+    AXES.forEach(function (a) { if (typeof state.axes[a.id] === "number") n++; });
+    return { answered: n };
   }
 
   /* ══ 画面 ══ */
@@ -876,84 +848,47 @@
 
     result: function () {
       var w = document.createElement("div");
-      if (state.q1 === "forget") {
-        w.appendChild(el('<p class="eyebrow">ありがとうございました</p>'));
-        w.appendChild(el('<h1>あなたの「あったら助かる」は、<br>要望として記録されました。</h1>'));
-        var tags = el('<div style="margin-top:16px"></div>');
-        (state.q2b.length ? state.q2b : ["（未選択）"]).forEach(function (t) {
-          tags.appendChild(el('<span class="pill">' + esc(t) + '</span>'));
-        });
-        w.appendChild(tags);
-        w.appendChild(el('<p class="note" style="margin-top:24px">同じ声が集まった項目から、鉄道会社にお届けしていきます。<br>よかった駅を思い出したら、いつでも投票してください。</p>'));
-        w.appendChild(restartBtn());
-        return w;
-      }
+      var isForget = state.q1 === "forget";
 
-      var r = computeResult();
       w.appendChild(el('<p class="eyebrow">ありがとうございました</p>'));
+      w.appendChild(el('<h1>' + (isForget
+        ? 'あなたの「あったら助かる」を、<br>受け取りました。'
+        : 'あなたの回答を、<br>受け取りました。') + '</h1>'));
 
-      if (r.isFirst) {
-        w.appendChild(el('<h1>' + esc(r.me.n) + '駅のページは、<br>あなたの言葉から始まりました。</h1>'));
-        w.appendChild(el('<div class="first-badge"><div class="fb-lead">FIRST REVIEWER</div>' +
-          '<div class="fb-main">あなたは ' + esc(r.me.n) + '駅の<br>第1号の推薦者です</div></div>'));
+      /* 匿名であることを、終わりにもう一度伝える */
+      w.appendChild(el('<div class="closing"><p class="closing-lead">このアンケートは匿名です。</p>' +
+        '<p>どなたが何を答えたかは記録していません。' +
+        'あなたの回答が、ひとりの人のものとして扱われることはありません。</p></div>'));
+
+      w.appendChild(el('<p class="field-label" style="margin-top:28px">このあとどうなるか</p>'));
+      var steps = el('<ol class="afterlist"></ol>');
+      [
+        '集まった回答をまとめて集計します',
+        '「ベビーカーで行ける駅ランキング」として、あらためて発表します',
+        isForget
+          ? '多く挙がった設備は、要望として鉄道会社にお届けします'
+          : '困った駅としていただいた内容は、公開せずに鉄道会社へお届けします'
+      ].forEach(function (t) { steps.appendChild(el('<li>' + t + '</li>')); });
+      w.appendChild(steps);
+
+      w.appendChild(el('<p class="note">途中経過や、いまの順位は公開していません。' +
+        '<strong>順位が見えると採点が甘くなってしまう</strong>ため、集計が終わるまでは誰にも見えないようにしています。</p>'));
+
+      if (!state.email.trim()) {
+        w.appendChild(el('<p class="note">結果が出たときにお知らせを受け取りたい場合は、' +
+          'ひとつ前の画面でメールアドレスをご記入ください。</p>'));
       } else {
-        w.appendChild(el('<h1>あなたの1票で、<br>' + esc(r.me.n) + '駅の点数が動きました。</h1>'));
+        w.appendChild(el('<p class="note">発表のときに、ご記入いただいたメールアドレスへお知らせします。</p>'));
       }
 
-      w.appendChild(el('<div class="result-score"><span class="score-num">' +
-        r.me.S.toFixed(2) + '</span><span class="score-unit">点 ／ 10点満点<br>（あなたの採点は ' + r.score + ' 点）</span></div>'));
-
-      var ranks = el('<div class="ranks"></div>');
-      function row(cat, rk) {
-        if (!rk) return;
-        ranks.appendChild(el('<div class="rank-row"><span class="rank-cat">' + esc(cat) + '</span>' +
-          '<span class="rank-val"><em>' + rk.r + '</em> 位 / ' + rk.n + '駅</span></div>'));
-      }
-      row("全国", r.national);
-      row(r.me.pref + "内", r.byPref);
-      row(r.me.size + "駅部門", r.bySize);
-      w.appendChild(ranks);
-
-      if (r.isFirst) {
-        w.appendChild(el('<p class="note">まだ回答が1件のため、順位は暫定です。' +
-          'あと2人が投票すると「隠れた名駅」枠に、10人でランキングに正式掲載されます。</p>'));
-      } else {
-        w.appendChild(el('<p class="note">順位は、回答が少ない駅が偏って上位に来ないよう補正して計算しています' +
-          '（ベイズ平均・定数m=' + M_CONST + '／全体平均C=' + C_MEAN.toFixed(2) + '）。</p>'));
-      }
-      w.appendChild(el('<p class="note" style="color:var(--poor)">' +
-        '⚠ ここに出ている点数と順位は、<strong>動作を見せるための架空のデータ</strong>です。' +
-        '実際の調査結果ではありません。</p>'));
-
-      if (state.q2.length) {
-        w.appendChild(el('<p class="field-label" style="margin-top:28px">あなたが選んだ推しポイント</p>'));
-        var tg = document.createElement("div");
-        state.q2.slice(0, 4).forEach(function (t) { tg.appendChild(el('<span class="pill">' + esc(t) + '</span>')); });
-        w.appendChild(tg);
-      }
-      if (state.comment.trim()) {
-        w.appendChild(el('<p class="field-label" style="margin-top:28px">駅のページに掲載されました</p>'));
-        w.appendChild(el('<blockquote class="quote">' + esc(state.comment) + '</blockquote>'));
-      }
-      if (photos.good.length) {
-        w.appendChild(el('<p class="field-label" style="margin-top:28px">添付した写真（' + photos.good.length + '枚）</p>'));
-        var g = el('<div class="shots"></div>');
-        photos.good.forEach(function (p, i) {
-          var c = el('<div class="shot"><img alt="添付した写真 ' + (i + 1) + '"></div>');
-          c.querySelector("img").src = p.url; g.appendChild(c);
-        });
-        w.appendChild(g);
-      } else {
-        w.appendChild(el('<p class="note" style="margin-top:24px">写真はまだありません。次にこの駅へ行ったとき、' +
-          'このページから追加できます。<br>（本番ではこの完了画面に、あなた専用のURLが発行されます）</p>'));
-      }
-
+      /* 拡散は「順位の自慢」ではなく「アンケートそのものを広める」に置き換える */
       var share = el('<div class="sharebox"></div>');
-      share.appendChild(el('<p class="field-label" style="margin-bottom:0">この駅を応援する投稿</p>'));
-      var txt = "ベビーカーで行けた駅、投票してきました。\n" +
-        "わたしの推しは " + r.me.n + "駅。" + (state.q2[0] ? state.q2[0].replace(/。$/, "") + "。\n" : "\n") +
-        (r.isFirst ? "まだ誰も投票していなかったので、第1号になりました。\n"
-                   : "いま" + r.me.pref + "で" + (r.byPref ? r.byPref.r : "-") + "位。もっと上がってほしい。\n") +
+      share.appendChild(el('<p class="field-label" style="margin-bottom:0">このアンケートを広める</p>'));
+      var station = state.station.trim().replace(/駅$/, "");
+      var txt = "ベビーカーで行ける駅のアンケートに答えました。\n" +
+        (!isForget && station ? "わたしが挙げたのは " + station + "駅。\n" : "") +
+        "「よかった駅」を挙げるだけの、どこも責めないアンケートです。\n" +
+        "2分で終わるので、よかったら。\n" +
         "#ベビーカーで行けた駅";
       var pre = el('<div class="sharetext"></div>'); pre.textContent = txt;
       share.appendChild(pre);
