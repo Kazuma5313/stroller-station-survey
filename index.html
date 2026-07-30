@@ -685,8 +685,11 @@
   }
 
   function submitAnswers() {
-    if (sent.state === "sending" || sent.state === "done") return Promise.resolve();
-    if (!isLive()) { sent = { state: "done", error: "" }; return Promise.resolve(); }
+    if (sent.state === "sending") return Promise.resolve();
+    /* 送信の要否にかかわらず、必ず完了画面まで描画すること。
+       ここで render() を落とすとボタンを押しても画面が動かない */
+    if (sent.state === "done") { render(); return Promise.resolve(); }
+    if (!isLive()) { sent = { state: "done", error: "" }; render(); return Promise.resolve(); }
     sent = { state: "sending", error: "" };
     render();
     return buildPayload().then(function (payload) {
