@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>押してみる。— ベビーカー3D体験</title>
+<style>
+  :root{
+    --paper:#f7f2e8; --paper2:#fffdf8; --ink:#2b2622; --sub:#7d7166;
+    --line:#e3d8c6; --accent:#c2453d; --accent2:#b8722a; --ok:#3f7d5a; --blue:#3c6b96;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;overscroll-behavior:none}
+  body{
+    background:var(--paper);color:var(--ink);
+    font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",system-ui,sans-serif;
+    line-height:1.7;-webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:18px 14px 48px}
+  h1,h2,h3{line-height:1.4;margin:0 0 .5em}
+  h1{font-size:26px}h2{font-size:19px}h3{font-size:15px}
+  p{margin:0 0 .8em}
+  .sub{color:var(--sub);font-size:13.5px}
+  .card{background:var(--paper2);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 2px 0 rgba(0,0,0,.06);margin-bottom:14px}
+  .btn{border:none;border-radius:999px;padding:14px 24px;background:var(--accent);color:#fff;
+       font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.12)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line);box-shadow:none}
+  .btn.wide{display:block;width:100%;margin-bottom:9px}
+  .btn:active{transform:translateY(1px)}
+  .tagline{color:var(--accent);font-weight:700;font-size:13px;letter-spacing:.08em}
+  .screen{display:none}.screen.on{display:block}
+  .quote{background:#f3ece0;border-radius:10px;padding:11px 13px;font-size:13.5px;margin:10px 0}
+  .axis{border-left:3px solid var(--accent);padding:2px 0 2px 11px;margin:11px 0}
+  .axis b{font-size:14px}.axis p{font-size:13.5px;color:var(--sub);margin:2px 0 0}
+  .stat{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+  .stat div{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 11px}
+  .stat b{display:block;font-size:20px;line-height:1.3}
+  .stat span{font-size:11.5px;color:var(--sub)}
+  .big{font-size:34px;font-weight:800;color:var(--accent);line-height:1.15;margin:6px 0}
+  .keys{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13.5px;align-items:center}
+  .kb{display:inline-block;min-width:30px;text-align:center;border:1.5px solid var(--line);
+      border-bottom-width:3px;border-radius:7px;padding:2px 8px;font-weight:700;font-size:12.5px;background:var(--paper2)}
+  hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+  a{color:var(--blue)}
+
+  /* ---------- 3D画面 ---------- */
+  #play{position:fixed;inset:0;display:none;background:#0d0d10;z-index:20;touch-action:none;overflow:hidden}
+  #play.on{display:block}
+  #cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #hud{position:absolute;left:0;right:0;top:0;padding:10px 12px;
+       font-size:12px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6);pointer-events:none}
+  .hrow{display:flex;gap:10px;align-items:center;justify-content:space-between;max-width:640px;margin:0 auto}
+  .meter{flex:1;min-width:0}
+  .meter .lab{display:flex;justify-content:space-between;font-size:10.5px;opacity:.9}
+  .meter .bar{height:7px;border-radius:5px;background:rgba(255,255,255,.25);overflow:hidden;margin-top:2px}
+  .meter .bar i{display:block;height:100%;border-radius:5px;transition:width .12s linear}
+  #b-stam i{background:#6fd39b}#b-baby i{background:#f0b455}
+  .low i{background:#e8695e !important}
+  #topline{text-align:center;max-width:640px;margin:0 auto 6px;font-size:13px;font-weight:700}
+  #gap{text-align:center;font-size:12.5px;margin-top:4px;opacity:.95}
+  #hint{position:absolute;left:0;right:0;bottom:132px;text-align:center;color:#fff;
+        font-size:14px;font-weight:700;text-shadow:0 2px 6px rgba(0,0,0,.8);pointer-events:none;
+        padding:0 16px;opacity:0;transition:opacity .25s}
+  #hint.on{opacity:1}
+  #flash{position:absolute;inset:0;pointer-events:none;background:#c2453d;opacity:0;transition:opacity .3s}
+  #big{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+       color:#fff;font-size:64px;font-weight:800;text-shadow:0 4px 18px rgba(0,0,0,.7);pointer-events:none;opacity:0}
+  #soothe{position:absolute;left:50%;transform:translateX(-50%);bottom:180px;width:170px;display:none}
+  #soothe .bar{height:9px;background:rgba(255,255,255,.3);border-radius:6px;overflow:hidden}
+  #soothe .bar i{display:block;height:100%;background:#f0b455;width:0}
+  #soothe p{color:#fff;font-size:12px;text-align:center;margin:0 0 4px;text-shadow:0 1px 3px #000}
+
+  /* ---------- 操作パネル ---------- */
+  #pad{position:absolute;left:0;right:0;bottom:0;padding:12px 14px calc(14px + env(safe-area-inset-bottom));
+       display:flex;justify-content:space-between;align-items:flex-end;gap:12px;pointer-events:none}
+  #pad .grp{display:flex;gap:10px;pointer-events:auto}
+  .pb{width:66px;height:66px;border-radius:50%;border:2px solid rgba(255,255,255,.55);
+      background:rgba(20,20,24,.45);color:#fff;font-size:13px;font-weight:700;font-family:inherit;
+      display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2;
+      -webkit-user-select:none;user-select:none;cursor:pointer}
+  .pb.act{background:rgba(194,69,61,.85);border-color:#fff}
+  .pb.wide{width:86px;border-radius:34px}
+  @media (max-width:430px){
+    #pad{padding-left:10px;padding-right:10px;gap:8px}
+    #pad .grp{gap:8px}
+    .pb{width:58px;height:58px;font-size:12px}
+    .pb.wide{width:72px;border-radius:29px}
+  }
+  #quit{position:absolute;right:10px;top:6px;pointer-events:auto;background:rgba(0,0,0,.35);
+        color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:8px;font-size:11px;padding:4px 9px;
+        font-family:inherit;cursor:pointer}
+  @media (min-width:760px){ .pb{width:58px;height:58px;font-size:12px} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<!-- ============ TITLE ============ -->
+<section id="s-title" class="screen on">
+  <p class="tagline">STROLLER 3D — 押してみる</p>
+  <h1>押してみる。</h1>
+  <div class="card">
+    <p>これは「大変さを説明する」ゲームではありません。<br><b>実際に押しにくい</b>だけのゲームです。</p>
+    <p>あなたはベビーカーのハンドルを握っています。横には歩けません。止まったままでは向きも変えられません。そして床の2cmの段差は、前輪を持ち上げないと越えられません。</p>
+    <p>同じ道を、<b>身軽な人（ゴースト）</b>が同時にスタートします。追いつけるかどうか、やってみてください。</p>
+  </div>
+  <div class="card">
+    <h3>操作</h3>
+    <div class="keys">
+      <span><span class="kb">W</span> / <span class="kb">↑</span></span><span>押す（前に進む）</span>
+      <span><span class="kb">S</span> / <span class="kb">↓</span></span><span>引く・止まる</span>
+      <span><span class="kb">A</span><span class="kb">D</span> / <span class="kb">←</span><span class="kb">→</span></span><span>ハンドルを切る（後輪を軸に回る）</span>
+      <span><span class="kb">Space</span></span><span><b>前輪を持ち上げる</b>（段差を越える／その場で向きを変える）</span>
+      <span><span class="kb">E</span></span><span>あやす（止まった状態で長押し）</span>
+    </div>
+    <p class="sub" style="margin-top:10px">スマホは画面下のボタンで同じ操作ができます。</p>
+  </div>
+  <button class="btn wide" onclick="Flow.start()">スタート</button>
+  <p class="sub" style="text-align:center">※ シミュレーションです。実際に毎日この道を通っている人の体験を代弁するものではありません。</p>
+</section>
+
+<!-- ============ BRIEF ============ -->
+<section id="s-brief" class="screen">
+  <p class="tagline" id="b-tag"></p>
+  <h1 id="b-title"></h1>
+  <div class="card" id="b-body"></div>
+  <button class="btn wide" onclick="Flow.go()">位置につく</button>
+</section>
+
+<!-- ============ DEBRIEF ============ -->
+<section id="s-debrief" class="screen">
+  <div id="d-body"></div>
+  <button class="btn wide" id="d-next"></button>
+</section>
+
+<!-- ============ FINAL ============ -->
+<section id="s-final" class="screen"><div id="f-body"></div></section>
+
+</div>
+
+<!-- ============ 3D ============ -->
+<div id="play">
+  <canvas id="cv"></canvas>
+  <div id="hud">
+    <div id="topline"></div>
+    <div class="hrow">
+      <div class="meter"><div class="lab"><span>体力</span><span id="v-stam"></span></div>
+        <div class="bar" id="b-stam"><i style="width:100%"></i></div></div>
+      <div class="meter"><div class="lab"><span>赤ちゃん</span><span id="v-baby"></span></div>
+        <div class="bar" id="b-baby"><i style="width:100%"></i></div></div>
+    </div>
+    <div id="gap"></div>
+  </div>
+  <button id="quit" onclick="Flow.abort()">やめる</button>
+  <div id="soothe"><p>あやしています…</p><div class="bar"><i></i></div></div>
+  <div id="hint"></div>
+  <div id="flash"></div>
+  <div id="big"></div>
+  <div id="pad">
+    <div class="grp">
+      <div class="pb" data-in="left">◀</div>
+      <div class="pb" data-in="right">▶</div>
+    </div>
+    <div class="grp">
+      <div class="pb" id="pb-sooth" data-in="sooth" style="display:none">あやす</div>
+      <div class="pb" data-in="tilt">前輪を<br>上げる</div>
+      <div class="pb wide" data-in="push">押す</div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   0. 小道具
+   ===================================================================== */
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const TAU=Math.PI*2;
+function angWrap(a){ while(a>Math.PI)a-=TAU; while(a<-Math.PI)a+=TAU; return a; }
+function mmss(s){ s=Math.max(0,s); const m=Math.floor(s/60); const r=s-m*60;
+  return m+"'"+(r<10?"0":"")+r.toFixed(1); }
+
+/* =====================================================================
+   1. レンダラ（自前・ライブラリなし）
+   入力: ワールド座標のボックス／四角形  出力: canvas 2D への塗り分け
+   ・カメラ空間へ変換 → 近平面クリップ → 透視投影 → 深度ソート（画家法）
+   ===================================================================== */
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d',{alpha:false});
+let VW=0,VH=0,FOCAL=0,DPR=1;
+const NEAR=0.12, FARZ=60;
+const SKY=[214,208,196];              // 遠景・フォグ色
+const cam={x:0,y:1.6,z:-3,yaw:0,pitch:0.18};
+let draws=[];
+
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,1.75);
+  VW=cv.clientWidth; VH=cv.clientHeight;
+  cv.width=Math.round(VW*DPR); cv.height=Math.round(VH*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  // 横は約60°を保ち、縦長の画面では縦画角を広げる（スマホでベビーカーが寄りすぎないように）
+  FOCAL=Math.max(VW*0.5/Math.tan(0.52), VH*0.5/Math.tan(0.78));
+}
+window.addEventListener('resize',resize);
+
+function toCam(x,y,z){
+  const dx=x-cam.x, dy=y-cam.y, dz=z-cam.z;
+  const s=Math.sin(cam.yaw), c=Math.cos(cam.yaw);
+  const zf=dx*s+dz*c;                  // 前方成分
+  const xr=dx*c-dz*s;                  // 右方成分
+  // pitch>0 で見下ろし（前方の点は画面の上へ、床は手前に広がる）
+  const cp=Math.cos(cam.pitch), sp=Math.sin(cam.pitch);
+  return {x:xr, y:dy*cp+zf*sp, z:-dy*sp+zf*cp};
+}
+// 近平面クリップ（これが無いとカメラ背後の点が画面外に暴れる）
+function clipNear(p){
+  const out=[];
+  for(let i=0;i<p.length;i++){
+    const a=p[i], b=p[(i+1)%p.length];
+    const ain=a.z>=NEAR, bin=b.z>=NEAR;
+    if(ain) out.push(a);
+    if(ain!==bin){
+      const t=(NEAR-a.z)/(b.z-a.z);
+      out.push({x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t, z:NEAR});
+    }
+  }
+  return out;
+}
+const LGT=[0.34,0.87,-0.36];
+function litRGB(col,nx,ny,nz){
+  let d=nx*LGT[0]+ny*LGT[1]+nz*LGT[2]; if(d<0)d=0;
+  const k=0.44+0.56*d;
+  return [col[0]*k, col[1]*k, col[2]*k];
+}
+function addQuad(pw,rgb,bias,alpha){
+  const n=pw.length, cs=new Array(n);
+  let any=false;
+  for(let i=0;i<n;i++){ const c=toCam(pw[i].x,pw[i].y,pw[i].z); cs[i]=c; if(c.z>=NEAR) any=true; }
+  if(!any) return;
+  const cl=clipNear(cs);
+  if(cl.length<3) return;
+  const sp=new Array(cl.length*2);
+  let d=0, minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
+  for(let i=0;i<cl.length;i++){
+    const p=cl[i];
+    const sx=VW*0.5+p.x/p.z*FOCAL, sy=VH*0.5-p.y/p.z*FOCAL;
+    sp[i*2]=sx; sp[i*2+1]=sy; d+=p.z;
+    if(sx<minx)minx=sx; if(sx>maxx)maxx=sx; if(sy<miny)miny=sy; if(sy>maxy)maxy=sy;
+  }
+  if(maxx<0||minx>VW||maxy<0||miny>VH) return;   // 画面外は捨てる
+  d/=cl.length;
+  if(d>FARZ) return;
+  const fog=clamp((d-14)/38,0,0.72);
+  const r=rgb[0]+(SKY[0]-rgb[0])*fog, g=rgb[1]+(SKY[1]-rgb[1])*fog, b=rgb[2]+(SKY[2]-rgb[2])*fog;
+  draws.push({p:sp, d:d-(bias||0), c:'rgb('+(r|0)+','+(g|0)+','+(b|0)+')', a:alpha||1});
+}
+// 箱の6面。外向き法線は「面の中心 − 箱の中心」で決めるので頂点の巻き順を気にしなくてよい
+const BF=[[0,1,2,3],[4,5,6,7],[0,1,5,4],[2,3,7,6],[1,2,6,5],[3,0,4,7]];
+function addBoxPts(V,col,bias,alpha){
+  const cx=(V[0].x+V[6].x)*0.5, cy=(V[0].y+V[6].y)*0.5, cz=(V[0].z+V[6].z)*0.5;
+  for(let i=0;i<6;i++){
+    const f=BF[i], a=V[f[0]],b=V[f[1]],c=V[f[2]],e=V[f[3]];
+    let nx=(b.y-a.y)*(c.z-a.z)-(b.z-a.z)*(c.y-a.y);
+    let ny=(b.z-a.z)*(c.x-a.x)-(b.x-a.x)*(c.z-a.z);
+    let nz=(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+    const L=Math.hypot(nx,ny,nz)||1; nx/=L;ny/=L;nz/=L;
+    const fx=(a.x+b.x+c.x+e.x)*0.25, fy=(a.y+b.y+c.y+e.y)*0.25, fz=(a.z+b.z+c.z+e.z)*0.25;
+    if(nx*(fx-cx)+ny*(fy-cy)+nz*(fz-cz)<0){nx=-nx;ny=-ny;nz=-nz;}
+    if(nx*(fx-cam.x)+ny*(fy-cam.y)+nz*(fz-cam.z)>0) continue;   // 裏面は描かない
+    addQuad([a,b,c,e], litRGB(col,nx,ny,nz), bias, alpha);
+  }
+}
+function addBox(x0,y0,z0,x1,y1,z1,col,bias,alpha){
+  addBoxPts([{x:x0,y:y0,z:z0},{x:x1,y:y0,z:z0},{x:x1,y:y0,z:z1},{x:x0,y:y0,z:z1},
+             {x:x0,y:y1,z:z0},{x:x1,y:y1,z:z0},{x:x1,y:y1,z:z1},{x:x0,y:y1,z:z1}],col,bias,alpha);
+}
+function addFlat(x0,z0,x1,z1,y,col,bias){   // 床に貼る板
+  addQuad([{x:x0,y:y,z:z0},{x:x1,y:y,z:z0},{x:x1,y:y,z:z1},{x:x0,y:y,z:z1}],
+          litRGB(col,0,1,0), bias);
+}
+function project(x,y,z){
+  const c=toCam(x,y,z);
+  if(c.z<0.5) return null;
+  return {x:VW*0.5+c.x/c.z*FOCAL, y:VH*0.5-c.y/c.z*FOCAL, d:c.z};
+}
+function flush(){
+  draws.sort((a,b)=>b.d-a.d);
+  let ga=1;
+  for(let i=0;i<draws.length;i++){
+    const o=draws[i], p=o.p;
+    if(o.a!==ga){ ctx.globalAlpha=o.a; ga=o.a; }
+    ctx.beginPath(); ctx.moveTo(p[0],p[1]);
+    for(let j=2;j<p.length;j+=2) ctx.lineTo(p[j],p[j+1]);
+    ctx.closePath();
+    ctx.fillStyle=o.c; ctx.fill();
+    ctx.strokeStyle=o.c; ctx.lineWidth=1; ctx.stroke();   // 面の継ぎ目の白線を消す
+  }
+  if(ga!==1) ctx.globalAlpha=1;
+  draws.length=0;
+}
+
+/* =====================================================================
+   2. コース定義
+   solid: {x0,z0,x1,z1,y1} 当たり判定つきの箱  kerb: 段差  rough: 振動する床
+   ===================================================================== */
+const CGRAY=[196,190,178], CWALL=[208,201,187], CGATE=[176,172,168], CDARK=[128,124,120];
+function wall(x0,z0,x1,z1,y1,col,label){ return {x0,z0,x1,z1,y1:y1,col:col||CWALL,label:label}; }
+function pillar(x,z,col){ return {x0:x-0.3,z0:z-0.3,x1:x+0.3,z1:z+0.3,y1:3.2,col:col||CGRAY}; }
+
+const COURSES=[
+{
+  id:1, tag:'COURSE 1 / 通路', name:'2cmの段差',
+  lead:'まっすぐな通路。障害物らしい障害物は、床にある小さな段差だけ。',
+  brief:`身軽な人（ゴースト）と同時にスタートします。<br>
+  平らなところでは、あなたの方が速いくらいです。<b>問題は床にある3本の線</b>。<br>
+  ぶつかると前輪が止まります。<b>Space で前輪を持ち上げて</b>越えてください。`,
+  start:{x:0,z:-2,th:0}, goalZ:44,
+  bbox:{x0:-5.6,z0:-5,x1:5.6,z1:48},
+  solids:[ wall(-5.7,-5,-5,48,3.2), wall(5,-5,5.7,48,3.2), wall(-5.7,48,5.7,48.7,3.2),
+           pillar(-3.6,17), pillar(3.6,33) ],
+  kerbs:[ {x0:-5,z0:12,x1:5,z1:12.4,h:0.03,label:'2cm'},
+          {x0:-5,z0:22,x1:5,z1:22.5,h:0.06,label:'5cm'},
+          {x0:-5,z0:32,x1:5,z1:32.55,h:0.09,label:'8cm'} ],
+  rough:[ {x0:-5,z0:26,x1:5,z1:29.5} ],
+  crowd:[ {bx:-2.4,z:34,dz:-1,sp:1.05,amp:0.5,ph:0,z0:-4,z1:46},
+          {bx:2.6,z:26,dz:-1,sp:0.85,amp:0.4,ph:2,z0:-4,z1:46} ],
+  ghost:{pts:[[1.4,-2],[1.4,46]],sp:1.45},
+  lesson:{
+    title:'2cmは、段差ではなく「壁」だった',
+    axes:[['たどりつける','歩いていれば気づきもしない床の線で、前輪は完全に止まります。越えるには一度止まり、体重をかけて前を浮かせ、また押し出す——この3動作が毎回必要でした。'],
+          ['こわくない','急いで乗り上げようとしたときの「ガツン」。あれが赤ちゃんの頭に伝わっています。速く行くほど、乗っている子には乱暴になる。']],
+    quote:'「段差の解消」は、スロープを付けるという話に聞こえます。実際には、この3動作を1日に何十回やるかという話です。'}
+},
+{
+  id:2, tag:'COURSE 2 / 改札', name:'幅が、足りない',
+  lead:'改札の列。ゴーストは目の前の改札をすっと抜けていきます。',
+  brief:`あなたとベビーカーは、<b>合わせて全長1.5m・幅0.6m</b>。<br>
+  通常改札の幅では通れません。<b>広い改札はひとつだけ</b>、右の端にあります。<br>
+  横には歩けないので、切り返して向きを変えてください（止まったままなら Space で前輪を浮かせると回れます）。`,
+  start:{x:-1.2,z:-2,th:0}, goalZ:46,
+  bbox:{x0:-6.6,z0:-5,x1:6.6,z1:50},
+  solids:[ wall(-6.7,-5,-6,50,3.2), wall(6,-5,6.7,50,3.2), wall(-6.7,50,6.7,50.7,3.2),
+    // 改札の列（隙間0.5m＝通れない／右端だけ0.95m）
+    wall(-6,27,-4.6,28.6,1.05,CGATE), wall(-4.1,27,-2.7,28.6,1.05,CGATE),
+    wall(-2.2,27,-0.8,28.6,1.05,CGATE,'通常改札'), wall(-0.3,27,1.1,28.6,1.05,CGATE),
+    wall(1.6,27,3.0,28.6,1.05,CGATE), wall(3.95,27,6,28.6,1.05,CGATE,'広い改札 →'),
+    pillar(-4.2,14), pillar(4.2,38) ],
+  kerbs:[ {x0:-6,z0:14,x1:6,z1:14.5,h:0.06,label:'5cm'},
+          {x0:-6,z0:37,x1:6,z1:37.4,h:0.03,label:'2cm'} ],
+  rough:[ {x0:-6,z0:20,x1:6,z1:23} ],
+  crowd:[ {bx:-3.0,z:20,dz:-1,sp:1.15,amp:0.6,ph:0,z0:-4,z1:26},
+          {bx:0.6,z:12,dz:-1,sp:1.0,amp:0.5,ph:1.4,z0:-4,z1:26},
+          {bx:2.2,z:34,dz:-1,sp:1.2,amp:0.7,ph:3,z0:29,z1:48},
+          {bx:-1.6,z:42,dz:-1,sp:0.9,amp:0.4,ph:2.2,z0:29,z1:48},
+          {bx:4.6,z:24,dz:0,sp:0,amp:0.15,ph:0.5,z0:24,z1:24} ],
+  ghost:{pts:[[-1.5,-2],[-1.5,30],[0.5,48]],sp:1.45},
+  lesson:{
+    title:'「通れる改札」は、いつも端にある',
+    axes:[['たどりつける','ゴーストが2秒で抜けた列を、あなたは端まで移動してから通りました。ベビーカー・車いす・大きな荷物は、いつも列の端に回らされます。'],
+          ['迷わない','どれが広い改札かは、近づくまで分かりません。混んだ改札前で立ち止まって探す——その数秒が、いちばん居心地が悪い。'],
+          ['こわくない','横に歩けない乗り物で人の流れの中を横断する。ぶつかるのが怖いのではなく、<b>ぶつけてしまうのが怖い</b>。']],
+    quote:'幅が5cm足りないだけで、経路は「無い」のと同じになります。'}
+},
+{
+  id:3, tag:'COURSE 3 / 階段', name:'あっち、と言われた方へ',
+  lead:'ホームはまっすぐ先。ただし正面は階段です。',
+  brief:`ゴーストは階段を上って、まっすぐ行きます。<br>
+  あなたは上れません。<b>右側の通路（バリアフリー経路）</b>を回ってください。<br>
+  回り道の中にも段差と人がいます。ベンチがあるので、体力が尽きそうなら止まって休めます。`,
+  start:{x:0,z:-2,th:0}, goalZ:54,
+  bbox:{x0:-5.6,z0:-5,x1:11.6,z1:58},
+  solids:[
+    wall(-5.7,-5,-5,58,3.2),                       // 左壁
+    wall(5,-5,5.7,30,3.2),                         // 右壁（〜迂回路入口）
+    wall(5,36,5.7,46,3.2),                         // 右壁（入口と出口の間）
+    wall(5,50,5.7,58,3.2),                         // 右壁（出口〜奥）
+    wall(-5.7,58,11.6,58.7,3.2),                   // 奥壁
+    wall(5,30,11,30.7,3.2), wall(5,49.3,11,50,3.2),// 迂回路の前後の壁
+    wall(11,30,11.7,50,3.2),                       // 迂回路の外壁
+    {x0:-5,z0:40,x1:5,z1:45.2,y1:1.65,col:CDARK,draw:false},   // 階段の当たり判定
+    pillar(-3.8,16), pillar(8.2,40,CGRAY) ],
+  stairs:{x0:-5,x1:5,z0:40,z1:45.2,steps:6,h:1.65},
+  signs:[{x:4.6,y:2.0,z:29.5,text:'バリアフリー経路 →'},{x:0,y:1.9,z:39,text:'階段'}],
+  kerbs:[ {x0:-5,z0:18,x1:5,z1:18.5,h:0.06,label:'5cm'},
+          {x0:5,z0:43,x1:11,z1:43.45,h:0.04,label:'3cm'} ],
+  rough:[ {x0:5,z0:33,x1:11,z1:38} ],
+  bench:{x0:9.2,z0:34,x1:10.6,z1:36.4},
+  crowd:[ {bx:-2.0,z:24,dz:-1,sp:1.1,amp:0.5,ph:0,z0:-4,z1:38},
+          {bx:2.4,z:12,dz:-1,sp:0.95,amp:0.45,ph:2,z0:-4,z1:38},
+          {bx:7.4,z:46,dz:-1,sp:0.8,amp:0.6,ph:1,z0:32,z1:48},
+          {bx:1.5,z:52,dz:-1,sp:1.0,amp:0.4,ph:0.6,z0:46,z1:56} ],
+  ghost:{pts:[[0.9,-2],[0.9,56]],sp:1.45},
+  lesson:{
+    title:'その回り道は、地図には載っていない',
+    axes:[['たどりつける','ゴーストの直進が50m、あなたの経路は70m以上。バリアフリー経路は「原則1ルート確保」という考え方で整備されるので、"ある"けれど"遠い"は例外ではなく標準です。'],
+          ['ひと息つける','ベンチで止まれましたか。座れる場所があるかどうかで、立て直せる幅が変わります。通れることと、続けられることは別です。'],
+          ['待たない','回り道の分だけ、電車1本ぶんの時間が消えます。急ぐと段差で赤ちゃんが起きる。起きたら止まる。急げないようにできている。']],
+    quote:'「エレベーターありますよ」と「まっすぐ行けますよ」は、まったく違うことを言っています。'}
+}];
+
+/* =====================================================================
+   3. 状態
+   ===================================================================== */
+const IN={push:0,pull:0,left:0,right:0,tilt:0,sooth:0};
+const P={x:0,z:0,th:0,v:0,tilt:0,stam:100,comfort:100,awake:false,sooth:0};
+const G={ci:0,C:null,t:0,phase:'idle',count:3,
+         blocked:0,bumps:0,awakeT:0,lifts:0,shake:0,camYaw:0,bob:0,
+         ghost:null,ghostT:0,results:[],hinted:{},heldStop:0};
+
+/* =====================================================================
+   4. 物理
+   ・位置＝後輪の接地点。向きを変えると前が振られる（＝押し車の挙動）
+   ・当たり判定は3つの円（前輪・後輪・押している人）
+   ===================================================================== */
+const R_FRONT=0.26, R_REAR=0.26, R_BACK=0.24, D_FRONT=0.72, D_BACK=0.42;
+
+function jolt(j){
+  P.comfort=clamp(P.comfort-j*0.9,0,100);
+  if(P.comfort<=0 && !P.awake){
+    P.awake=true;
+    hint('赤ちゃんが起きて泣きだした。止まって「あやす」を長押し',5.5);
+    flash();
+  }
+}
+function shakeAdd(s){ G.shake=Math.min(1.2,G.shake+s); }
+function flash(){ const f=document.getElementById('flash');
+  f.style.transition='none'; f.style.opacity='0.34';
+  requestAnimationFrame(()=>{ f.style.transition='opacity .45s'; f.style.opacity='0'; }); }
+
+function hitRect(px,pz,r,x0,z0,x1,z1){
+  const qx=clamp(px,x0,x1), qz=clamp(pz,z0,z1);
+  const dx=px-qx, dz=pz-qz, d2=dx*dx+dz*dz;
+  if(d2>=r*r) return null;
+  const d=Math.sqrt(d2);
+  if(d<1e-5){                                   // 中心が矩形の内側：最小貫入軸で押し出す
+    const dl=px-x0, dr=x1-px, db=pz-z0, du=z1-pz;
+    const m=Math.min(dl,dr,db,du);
+    if(m===dl) return {nx:-1,nz:0,pen:dl+r};
+    if(m===dr) return {nx:1,nz:0,pen:dr+r};
+    if(m===db) return {nx:0,nz:-1,pen:db+r};
+    return {nx:0,nz:1,pen:du+r};
+  }
+  return {nx:dx/d,nz:dz/d,pen:r-d};
+}
+function resolve(h){
+  P.x+=h.nx*h.pen; P.z+=h.nz*h.pen;
+  const fx=Math.sin(P.th), fz=Math.cos(P.th);
+  const along=fx*h.nx+fz*h.nz;                  // <0 なら進行方向に壁
+  const impact=Math.abs(P.v)*Math.max(0,-along*Math.sign(P.v||1));
+  if(impact>0.5){ jolt(4.5+11*impact); shakeAdd(0.3+0.5*impact); }
+  if(along*P.v<0) P.v*=0.12; else P.v*=0.88;
+  return impact;
+}
+
+function collide(dt){
+  const C=G.C;
+  for(let pass=0;pass<2;pass++){
+    const fx=Math.sin(P.th), fz=Math.cos(P.th);
+    const circles=[[P.x+fx*D_FRONT,P.z+fz*D_FRONT,R_FRONT],
+                   [P.x,P.z,R_REAR],
+                   [P.x-fx*D_BACK,P.z-fz*D_BACK,R_BACK]];
+    for(const s of C.solids){
+      if(s.collide===false) continue;
+      for(const c of circles){
+        const h=hitRect(c[0],c[1],c[2],s.x0,s.z0,s.x1,s.z1);
+        if(h){ const im=resolve(h);
+          if(s===C._stairSolid && im>0.2) hintOnce('stairs','階段は上れない。右の通路（バリアフリー経路）へ',5); }
+      }
+    }
+    for(const p of G.crowd){
+      for(const c of circles){
+        const h=hitRect(c[0],c[1],c[2],p.x-0.3,p.z-0.24,p.x+0.3,p.z+0.24);
+        if(h){
+          const was=Math.abs(P.v);
+          resolve(h);
+          if(was>0.4 && p.cd<=0){ p.cd=1.2; G.bumps++; jolt(3.5); hint('「すみません」',1.4); }
+        }
+      }
+    }
+  }
+  // --- 段差：前輪だけが引っかかる。後輪は乗り越えるが揺れる ---
+  const fx=Math.sin(P.th), fz=Math.cos(P.th);
+  const fX=P.x+fx*D_FRONT, fZ=P.z+fz*D_FRONT;
+  for(const k of C.kerbs){
+    const hf=hitRect(fX,fZ,R_FRONT,k.x0,k.z0,k.x1,k.z1);
+    if(hf){
+      const canPass = P.tilt>0.55 && Math.abs(P.v)<1.35;
+      if(canPass){
+        if(!k._f){ k._f=true; k._hit=false; jolt(1.8); shakeAdd(0.12); G.lifts++; }
+      }else{
+        const was=Math.abs(P.v);
+        if(!k._hit && was>0.2){
+          k._hit=true; G.blocked++;
+          hintOnce('kerb','止まって「前輪を上げる」を押しながら、ゆっくり越える',5.5);
+        }
+        resolve(hf);
+      }
+    }else{ k._f=false; k._hit=false; }
+    const hr=hitRect(P.x,P.z,R_REAR,k.x0,k.z0,k.x1,k.z1);
+    if(hr){ if(!k._r){ k._r=true; jolt(2.5+7*Math.abs(P.v)); shakeAdd(0.18+0.2*Math.abs(P.v)); } }
+    else k._r=false;
+  }
+  // --- ざらざらの床：速度の2乗で揺れる（ゆっくり通れば優しい） ---
+  for(const r of C.rough){
+    if(P.x>r.x0&&P.x<r.x1&&P.z>r.z0&&P.z<r.z1){
+      const sp=Math.abs(P.v);
+      jolt(5.5*sp*sp*dt); if(sp>0.3) shakeAdd(0.9*sp*dt);
+    }
+  }
+}
+
+function step(dt){
+  if(G.phase==='count'){
+    G.count-=dt;
+    const n=Math.ceil(G.count);
+    setBig(G.count<=0?'GO':String(n));
+    if(G.count<=-0.45){ G.phase='run'; setBig(''); }
+    return;
+  }
+  if(G.phase!=='run') return;
+  G.t+=dt;
+
+  // 前輪リフト（じわっと上がる／降りる）
+  P.tilt += ((IN.tilt?1:0)-P.tilt)*Math.min(1,dt*8);
+
+  // あやす
+  if(P.awake){ G.awakeT+=dt; }
+  if(IN.sooth && Math.abs(P.v)<0.25){
+    P.sooth+=dt;
+    if(P.sooth>=5){ P.sooth=0; P.awake=false; P.comfort=Math.max(P.comfort,55); hint('泣きやんだ。5秒。',2.2); }
+  }else if(P.sooth>0){ P.sooth=Math.max(0,P.sooth-dt*2); }
+
+  // 押す・引く
+  const sf = P.stam>25 ? 1 : (0.5+0.5*P.stam/25);
+  let a=0;
+  if(IN.push && !IN.sooth) a += (P.tilt>0.5?1.0:2.35)*sf*(P.awake?0.9:1);
+  if(IN.pull) a -= 3.0;
+  a -= (1.22+P.tilt*1.5)*P.v;
+  if(!IN.push && !IN.pull && Math.abs(P.v)>0.001)
+    a -= 0.9*Math.sign(P.v)*Math.min(1,Math.abs(P.v)*5);
+  P.v=clamp(P.v+a*dt,-0.8,2.4);
+  if(Math.abs(P.v)<0.02 && !IN.push && !IN.pull) P.v=0;
+
+  // ハンドル：止まっているとほとんど回らない。前輪を浮かせると回れる
+  const sp=Math.abs(P.v);
+  const rate=1.15*(P.tilt>0.5?1.55:(sp<0.12?0.28:1))*(0.4+0.6*Math.min(1,sp/1.1));
+  P.th=angWrap(P.th+rate*((IN.right?1:0)-(IN.left?1:0))*dt);
+
+  // 移動（後輪の接地点が進む）
+  P.x+=Math.sin(P.th)*P.v*dt; P.z+=Math.cos(P.th)*P.v*dt;
+
+  collide(dt);
+
+  // 体力
+  P.stam=clamp(P.stam-((IN.push?0.85:0.10)+(P.tilt>0.5?2.6:0))*dt,0,100);
+  // ベンチで休む
+  const B=G.C.bench;
+  if(B && sp<0.15 && P.x>B.x0-0.6&&P.x<B.x1+0.6&&P.z>B.z0-0.6&&P.z<B.z1+0.6){
+    P.stam=clamp(P.stam+7*dt,0,100);
+    G.onBench=true;
+  } else G.onBench=false;
+
+  // 人の流れ
+  for(const p of G.crowd){
+    p.t+=dt; if(p.cd>0) p.cd-=dt;
+    p.z+=p.dz*p.sp*dt;
+    if(p.z<p.z0){ p.z=p.z1; } if(p.z>p.z1){ p.z=p.z0; }
+    p.x=p.bx+Math.sin(p.t*0.7+p.ph)*p.amp;
+  }
+  // ゴースト
+  const gh=G.ghost;
+  if(!gh.done){
+    let move=gh.sp*dt;
+    while(move>0 && gh.i<gh.pts.length-1){
+      const A=gh.pts[gh.i], B=gh.pts[gh.i+1];
+      const dx=B[0]-gh.x, dz=B[1]-gh.z, d=Math.hypot(dx,dz);
+      if(d<=move){ gh.x=B[0]; gh.z=B[1]; gh.i++; move-=d; }
+      else { gh.x+=dx/d*move; gh.z+=dz/d*move; move=0; }
+    }
+    gh.th=Math.atan2(0,1);
+    if(gh.z>=G.C.goalZ && !gh.done){ gh.done=true; G.ghostT=G.t; }
+  }
+  // ゴール
+  if(P.z>=G.C.goalZ){ finish(); }
+  tips();
+  G.shake*=Math.exp(-dt*5.5);
+  G.bob+=dt*7.2*Math.min(1,sp);
+}
+// 詰まったまま気づけない状況を作らないための、状況依存の案内
+function tips(){
+  if(P.stam<25) hintOnce('stam','腕が重い。体力が減ると押す力が落ちる'+(G.C.bench?'。ベンチで休める':''),4.5);
+  if(G.blocked>=3) hintOnce('kerb2','速いままだと絶対に越えられない。一度止まって前輪を上げる',5);
+  if(G.C.id===2 && P.z>21 && G.t>40) hintOnce('gate','通れる幅の改札は、右の端にひとつだけ',5);
+  if(G.C.id===3 && P.z>26 && G.t>50) hintOnce('detour','正面は階段。右の壁の切れ目から回り道へ',5);
+}
+
+/* =====================================================================
+   5. 描画
+   ===================================================================== */
+// ハンドルの少し後ろ・目線の高さ。ベビーカー全体と自分の腕が視界に入る位置
+const CAM={back:2.05, h:1.95, pitch:0.335};
+function updateCam(dt){
+  G.camYaw += angWrap(P.th-G.camYaw)*Math.min(1,dt*7);
+  const fx=Math.sin(P.th), fz=Math.cos(P.th);
+  const s=G.shake;
+  cam.x=P.x-fx*CAM.back+(Math.random()-0.5)*s*0.05;
+  cam.z=P.z-fz*CAM.back+(Math.random()-0.5)*s*0.05;
+  cam.y=CAM.h+P.tilt*0.05+Math.sin(G.bob)*0.018+(Math.random()-0.5)*s*0.06;
+  cam.yaw=G.camYaw;
+  cam.pitch=CAM.pitch-P.tilt*0.05+(Math.random()-0.5)*s*0.03;
+}
+function drawFloor(){
+  const b=G.C.bbox, T=2.5;
+  for(let z=Math.floor(b.z0/T)*T; z<b.z1; z+=T){
+    if(z+T< P.z-8 || z> P.z+46) continue;
+    for(let x=Math.floor(b.x0/T)*T; x<b.x1; x+=T){
+      const dx=x+T*0.5-cam.x, dz=z+T*0.5-cam.z;
+      if(dx*dx+dz*dz>2500) continue;
+      const odd=((x/T|0)+(z/T|0))&1;
+      addFlat(Math.max(x,b.x0),Math.max(z,b.z0),Math.min(x+T,b.x1),Math.min(z+T,b.z1),0,
+              odd?[186,180,168]:[196,190,178]);
+    }
+  }
+}
+function drawCeiling(){
+  const b=G.C.bbox, T=5, Y=3.2;
+  for(let z=Math.floor(b.z0/T)*T; z<b.z1; z+=T){
+    if(z+T<P.z-4 || z>P.z+34) continue;
+    const z0=Math.max(z,b.z0), z1=Math.min(z+T,b.z1);
+    addQuad([{x:b.x0,y:Y,z:z0},{x:b.x1,y:Y,z:z0},{x:b.x1,y:Y,z:z1},{x:b.x0,y:Y,z:z1}],
+            [182,178,171]);                                     // 天井は照明で明るい前提でベタ塗り
+  }
+  for(let z=Math.ceil((P.z-4)/4.5)*4.5; z<P.z+34; z+=4.5){      // 天井の照明
+    if(z<b.z0||z>b.z1-1) continue;
+    addQuad([{x:b.x0+0.8,y:Y-0.012,z:z},{x:b.x1-0.8,y:Y-0.012,z:z},
+             {x:b.x1-0.8,y:Y-0.012,z:z+0.5},{x:b.x0+0.8,y:Y-0.012,z:z+0.5}],
+            [248,246,238],0.06);
+  }
+}
+function drawWorld(){
+  const C=G.C;
+  drawFloor(); drawCeiling();
+  for(const r of C.rough) addFlat(r.x0,r.z0,r.x1,r.z1,0.012,[198,176,96],0.04);
+  for(const k of C.kerbs){
+    addBox(k.x0,0,k.z0,k.x1,k.h,k.z1,[172,160,140],0.05);
+    addFlat(k.x0,k.z0,k.x1,k.z1,k.h+0.002,[204,142,60],0.06);
+  }
+  for(const s of C.solids){
+    if(s.draw===false) continue;
+    addBox(s.x0,0,s.z0,s.x1,s.y1,s.z1,s.col||CWALL);
+  }
+  if(C.stairs){
+    const st=C.stairs, dz=(st.z1-st.z0)/st.steps, dy=st.h/st.steps;
+    for(let i=0;i<st.steps;i++)
+      addBox(st.x0,0,st.z0+dz*i,st.x1,dy*(i+1),st.z1,[168,162,152]);
+  }
+  if(C.bench){
+    const b=C.bench;
+    addBox(b.x0,0.36,b.z0,b.x1,0.44,b.z1,[150,116,80]);
+    addBox(b.x0+0.1,0,b.z0+0.1,b.x0+0.25,0.36,b.z1-0.1,[110,106,100]);
+    addBox(b.x1-0.25,0,b.z0+0.1,b.x1-0.1,0.36,b.z1-0.1,[110,106,100]);
+  }
+  // ゴール
+  const gz=C.goalZ;
+  addFlat(C.bbox.x0,gz,C.bbox.x1,gz+0.5,0.014,[92,140,178],0.05);
+  // 人
+  for(const p of G.crowd){
+    addBox(p.x-0.20,0,p.z-0.14,p.x+0.20,1.28,p.z+0.14,[104,112,132]);
+    addBox(p.x-0.11,1.28,p.z-0.11,p.x+0.11,1.52,p.z+0.11,[214,180,156]);
+  }
+  // ゴースト
+  const gh=G.ghost;
+  if(!gh.done){
+    addBox(gh.x-0.20,0,gh.z-0.14,gh.x+0.20,1.30,gh.z+0.14,[236,246,255],0,0.45);
+    addBox(gh.x-0.11,1.30,gh.z-0.11,gh.x+0.11,1.54,gh.z+0.11,[236,246,255],0,0.45);
+  }
+}
+// ベビーカー本体（原点＝後輪の接地点、+z が前）
+function TL(lx,ly,lz){
+  const a=P.tilt*0.42, ca=Math.cos(a), sa=Math.sin(a);
+  const y=ly*ca+lz*sa, z2=-ly*sa+lz*ca;
+  const s=Math.sin(P.th), c=Math.cos(P.th);
+  return {x:P.x+lx*c+z2*s, y:y, z:P.z-lx*s+z2*c};
+}
+function part(x0,y0,z0,x1,y1,z1,col){
+  addBoxPts([TL(x0,y0,z0),TL(x1,y0,z0),TL(x1,y0,z1),TL(x0,y0,z1),
+             TL(x0,y1,z0),TL(x1,y1,z0),TL(x1,y1,z1),TL(x0,y1,z1)],col);
+}
+const C_FRAME=[74,76,82], C_WHEEL=[40,40,46], C_SEAT=[62,78,108],
+      C_HOOD=[178,76,66], C_SKIN=[236,200,174], C_BAG=[126,112,96], C_ARM=[228,196,178];
+function drawStroller(){
+  part(-0.31,0.02,-0.02,-0.20,0.26,0.18,C_WHEEL);  part(0.20,0.02,-0.02,0.31,0.26,0.18,C_WHEEL);
+  part(-0.22,0.11,0.02,0.22,0.17,0.14,C_FRAME);    // 後車軸
+  part(-0.26,0.02,0.66,-0.19,0.17,0.80,C_WHEEL);   part(0.19,0.02,0.66,0.26,0.17,0.80,C_WHEEL);
+  part(-0.26,0.24,0.02,-0.21,0.31,0.78,C_FRAME);   part(0.21,0.24,0.02,0.26,0.31,0.78,C_FRAME);
+  part(-0.24,0.29,0.10,0.24,0.42,0.62,C_SEAT);     // 座面（フレームまで届かせて一体に見せる）
+  part(-0.24,0.29,0.04,0.24,0.74,0.14,C_SEAT);
+  part(-0.24,0.42,0.10,-0.20,0.60,0.56,C_SEAT);    // アームレスト
+  part(0.20,0.42,0.10,0.24,0.60,0.56,C_SEAT);
+  part(-0.25,0.74,0.02,0.25,0.94,0.30,C_HOOD);
+  part(-0.26,0.28,-0.06,-0.22,0.96,0.02,C_FRAME);  part(0.22,0.28,-0.06,0.26,0.96,0.02,C_FRAME);
+  part(-0.30,0.96,-0.10,0.30,1.02,-0.03,C_FRAME);
+  part(-0.10,0.40,-0.18,0.10,0.66,-0.09,C_BAG);
+  part(-0.09,0.58,0.30,0.09,0.76,0.46,C_SKIN);     // 赤ちゃんの頭（見えるように幌の手前）
+  part(-0.28,0.98,-0.28,-0.22,1.10,-0.04,C_ARM);
+  part(0.22,0.98,-0.28,0.28,1.10,-0.04,C_ARM);
+}
+function drawLabels(){
+  const out=[];
+  const push=(x,y,z,t,col)=>{ const p=project(x,y,z); if(p&&p.d<26) out.push({p,t,col}); };
+  for(const s of G.C.solids) if(s.label) push((s.x0+s.x1)/2,s.y1+0.25,(s.z0+s.z1)/2,s.label,'#fff');
+  for(const k of G.C.kerbs) if(k.label) push((k.x0+k.x1)/2,0.35,(k.z0+k.z1)/2,k.label,'#ffd9a0');
+  for(const g of (G.C.signs||[])) push(g.x,g.y,g.z,g.text,'#cfe6ff');
+  const gh=G.ghost; if(!gh.done) push(gh.x,1.95,gh.z,'身軽な人','#e8f2ff');
+  push((G.C.bbox.x0+G.C.bbox.x1)/2,1.4,G.C.goalZ,'▼ ゴール','#bfe0ff');
+  out.sort((a,b)=>b.p.d-a.p.d);
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  for(const o of out){
+    ctx.font='700 '+Math.max(11,Math.min(19,190/o.p.d))+'px system-ui,sans-serif';
+    const w=ctx.measureText(o.t).width+14, h=20;
+    ctx.globalAlpha=clamp(1.15-o.p.d/26,0.25,1);
+    ctx.fillStyle='rgba(20,20,26,.62)';
+    ctx.beginPath(); ctx.roundRect(o.p.x-w/2,o.p.y-h/2,w,h,7); ctx.fill();
+    ctx.fillStyle=o.col; ctx.fillText(o.t,o.p.x,o.p.y+0.5);
+    ctx.globalAlpha=1;
+  }
+}
+function draw(){
+  const g=ctx.createLinearGradient(0,0,0,VH);
+  g.addColorStop(0,'#cfd6dd'); g.addColorStop(0.55,'#dcd7ca'); g.addColorStop(1,'#b9b3a6');
+  ctx.fillStyle=g; ctx.fillRect(0,0,VW,VH);
+  drawWorld(); drawStroller(); flush(); drawLabels();
+}
+
+/* =====================================================================
+   6. HUD・ヒント
+   ===================================================================== */
+const $=id=>document.getElementById(id);
+let hintT=0;
+function hint(t,sec){ $('hint').textContent=t; $('hint').classList.add('on'); hintT=sec||3; }
+function hintOnce(key,t,sec){ if(G.hinted[key]) return; G.hinted[key]=1; hint(t,sec); }
+function setBig(t){ const b=$('big'); b.textContent=t; b.style.opacity=t?'1':'0'; }
+function hud(dt){
+  if(hintT>0){ hintT-=dt; if(hintT<=0) $('hint').classList.remove('on'); }
+  $('v-stam').textContent=Math.round(P.stam)+'%';
+  $('v-baby').textContent=P.awake?'泣いている':Math.round(P.comfort)+'%';
+  $('b-stam').firstElementChild.style.width=P.stam+'%';
+  $('b-baby').firstElementChild.style.width=P.comfort+'%';
+  $('b-stam').classList.toggle('low',P.stam<25);
+  $('b-baby').classList.toggle('low',P.comfort<25||P.awake);
+  $('topline').textContent=G.C.name+'　'+mmss(G.t);
+  const gh=G.ghost;
+  const dP=Math.max(0,G.C.goalZ-P.z), dG=gh.done?0:Math.max(0,G.C.goalZ-gh.z);
+  const diff=dP-dG;
+  $('gap').textContent = gh.done
+    ? '身軽な人はもうゴールしている（'+mmss(G.ghostT)+'）'
+    : (diff>0.5 ? '身軽な人が '+diff.toFixed(0)+'m 先'
+      : diff<-0.5 ? 'あなたが '+(-diff).toFixed(0)+'m リード' : '並んでいる');
+  $('pb-sooth').style.display=(P.awake||P.comfort<45)?'flex':'none';
+  const s=$('soothe');
+  if(P.awake||P.sooth>0){ s.style.display='block'; s.querySelector('i').style.width=(P.sooth/5*100)+'%'; }
+  else s.style.display='none';
+  for(const b of document.querySelectorAll('.pb')) b.classList.toggle('act',!!IN[b.dataset.in]);
+}
+
+/* =====================================================================
+   7. ループ
+   ===================================================================== */
+const STEP=1/120;
+let acc=0,last=0,raf=0;
+function frame(t){
+  raf=requestAnimationFrame(frame);
+  const dt=Math.min(0.05,(t-last)/1000||0); last=t;
+  if(!$('play').classList.contains('on')) return;   // 画面を離れている間は描かない
+  if(G.phase==='count'||G.phase==='run'){
+    acc+=dt;
+    let n=0;
+    while(acc>=STEP && n<20){ step(STEP); acc-=STEP; n++; }
+    if(acc>0.2) acc=0;
+  }
+  updateCam(dt); draw(); hud(dt);
+}
+
+/* =====================================================================
+   8. 入力
+   ===================================================================== */
+const KEYMAP={KeyW:'push',ArrowUp:'push',KeyS:'pull',ArrowDown:'pull',
+  KeyA:'left',ArrowLeft:'left',KeyD:'right',ArrowRight:'right',Space:'tilt',KeyE:'sooth'};
+document.addEventListener('keydown',e=>{
+  if(!$('play').classList.contains('on')) return;
+  const k=KEYMAP[e.code]; if(k){ e.preventDefault(); IN[k]=1; }
+});
+document.addEventListener('keyup',e=>{ const k=KEYMAP[e.code]; if(k){ e.preventDefault(); IN[k]=0; } });
+window.addEventListener('blur',()=>{ for(const k in IN) IN[k]=0; });
+for(const b of document.querySelectorAll('.pb')){
+  const k=b.dataset.in;
+  const on=e=>{ e.preventDefault(); IN[k]=1; };
+  const off=e=>{ e.preventDefault(); IN[k]=0; };
+  b.addEventListener('pointerdown',on);
+  b.addEventListener('pointerup',off);
+  b.addEventListener('pointercancel',off);
+  b.addEventListener('pointerleave',off);
+}
+
+/* =====================================================================
+   9. フロー
+   ===================================================================== */
+const Flow={
+  start(){ G.ci=0; G.results=[]; this.brief(); },
+  brief(){
+    const C=COURSES[G.ci];
+    $('b-tag').textContent=C.tag; $('b-title').textContent=C.name;
+    $('b-body').innerHTML='<p><b>'+C.lead+'</b></p><p>'+C.brief+'</p>'+
+      '<div class="quote">操作：<span class="kb">W</span>押す　<span class="kb">A</span><span class="kb">D</span>ハンドル　'+
+      '<span class="kb">Space</span>前輪を上げる　<span class="kb">E</span>あやす</div>';
+    show('s-brief');
+  },
+  go(){
+    const C=COURSES[G.ci];
+    G.C=C;
+    Object.assign(P,{x:C.start.x,z:C.start.z,th:C.start.th,v:0,tilt:0,
+      stam:100,comfort:100,awake:false,sooth:0});
+    Object.assign(G,{t:0,phase:'count',count:3.0,blocked:0,bumps:0,awakeT:0,lifts:0,
+      shake:0,camYaw:C.start.th,bob:0,ghostT:0,hinted:{},onBench:false});
+    G.crowd=(C.crowd||[]).map(o=>({bx:o.bx,x:o.bx,z:o.z,dz:o.dz,sp:o.sp,amp:o.amp,ph:o.ph,
+      z0:o.z0,z1:o.z1,t:0,cd:0}));
+    G.ghost={pts:C.ghost.pts,sp:C.ghost.sp,x:C.ghost.pts[0][0],z:C.ghost.pts[0][1],i:0,done:false};
+    for(const k of C.kerbs){ k._f=k._r=k._hit=false; }
+    C._stairSolid=C.solids.find(s=>s.draw===false)||null;
+    document.querySelectorAll('.screen').forEach(e=>e.classList.remove('on'));
+    $('play').classList.add('on');
+    resize();
+    hint('W（押す）で前へ。A / D でハンドルを切る',6);
+    if(!raf){ last=performance.now(); raf=requestAnimationFrame(frame); }
+  },
+  abort(){ G.phase='idle'; for(const k in IN) IN[k]=0; $('play').classList.remove('on'); show('s-brief'); },
+  debrief(){
+    const C=G.C, r=G.results[G.results.length-1];
+    const ratio=(r.time/r.ghost).toFixed(1);
+    $('d-body').innerHTML=
+      '<p class="tagline">'+C.tag+' 結果</p><h1>'+C.lesson.title+'</h1>'+
+      '<div class="card" style="text-align:center">'+
+        '<p class="sub" style="margin:0">同じスタート、同じゴール</p>'+
+        '<p class="big">'+mmss(r.ghost)+' → '+mmss(r.time)+'</p>'+
+        '<p class="sub" style="margin:0">身軽な人の <b>'+ratio+'倍</b> かかりました</p></div>'+
+      '<div class="card"><div class="stat">'+
+        '<div><b>'+r.blocked+'回</b><span>段差で前輪が止まった</span></div>'+
+        '<div><b>'+r.lifts+'回</b><span>前輪を持ち上げた</span></div>'+
+        '<div><b>'+r.bumps+'回</b><span>人にぶつかった</span></div>'+
+        '<div><b>'+(r.awakeT>0?mmss(r.awakeT):"0'00.0")+'</b><span>泣かせてしまった時間</span></div>'+
+      '</div><p class="sub">残った体力：'+Math.round(r.stam)+'%</p></div>'+
+      '<div class="card"><h2>いま体験したこと</h2>'+
+        C.lesson.axes.map(a=>'<div class="axis"><b>'+a[0]+'</b><p>'+a[1]+'</p></div>').join('')+
+        '<div class="quote">'+C.lesson.quote+'</div></div>';
+    const last=G.ci>=COURSES.length-1;
+    const btn=$('d-next');
+    btn.textContent=last?'3コースのまとめを見る':'次のコースへ（'+COURSES[G.ci+1].name+'）';
+    btn.onclick=()=>{ if(last) Flow.final(); else { G.ci++; Flow.brief(); } };
+    show('s-debrief');
+  },
+  final(){
+    const R=G.results;
+    const tot=R.reduce((a,r)=>a+r.time,0), gtot=R.reduce((a,r)=>a+r.ghost,0);
+    const bl=R.reduce((a,r)=>a+r.blocked,0), bp=R.reduce((a,r)=>a+r.bumps,0);
+    const aw=R.reduce((a,r)=>a+r.awakeT,0), lf=R.reduce((a,r)=>a+r.lifts,0);
+    $('f-body').innerHTML=
+      '<p class="tagline">FINAL</p><h1>3つの道を、押し終えました</h1>'+
+      '<div class="card" style="text-align:center">'+
+        '<p class="sub" style="margin:0">3コース合計</p>'+
+        '<p class="big">'+mmss(gtot)+' → '+mmss(tot)+'</p>'+
+        '<p class="sub" style="margin:0">身軽な人の <b>'+(tot/gtot).toFixed(1)+'倍</b></p></div>'+
+      '<div class="card"><div class="stat">'+
+        '<div><b>'+bl+'回</b><span>段差で前輪が止まった</span></div>'+
+        '<div><b>'+lf+'回</b><span>前輪を持ち上げた</span></div>'+
+        '<div><b>'+bp+'回</b><span>人にぶつかった</span></div>'+
+        '<div><b>'+mmss(aw)+'</b><span>泣かせてしまった時間</span></div></div></div>'+
+      '<div class="card"><h2>あなたが押していた間、体は何を覚えたか</h2>'+
+        '<div class="axis"><b>たどりつける</b><p>段差ひとつ、幅5cm、階段1本。どれも「行けない」を作ります。距離ではなく、途切れているかどうか。</p></div>'+
+        '<div class="axis"><b>待たない</b><p>回り道と、止まってあやす時間。急ごうとするほど揺れて、余計に止まることになりました。</p></div>'+
+        '<div class="axis"><b>こわくない</b><p>横に動けない乗り物で人混みを横断する感覚。怖いのは、ぶつけてしまうことの方でした。</p></div>'+
+        '<div class="axis"><b>ひと息つける</b><p>座れる場所があるだけで、体力ゲージは戻ります。通れることと、続けられることは別です。</p></div>'+
+        '<div class="axis"><b>迷わない</b><p>広い改札も迂回路も、近づくまで分かりませんでした。設備が「ある」ことと「見つけられる」ことは別問題です。</p></div>'+
+        '<div class="quote">この5軸は駅の<b>構造と設備だけ</b>を見ます。誰かが手を貸してくれるかどうかは点数に入れません。'+
+        '——次に同じ道を通る人に、同じ体験を保証できないからです。</div></div>'+
+      '<div class="card"><h2>研修・ワークショップで使うなら</h2>'+
+        '<p><b>Q1.</b> いちばん「もう嫌だ」と思ったのは、どの操作でしたか。それは<b>時間</b>・<b>体力</b>・<b>まわりの目</b>のどれでしたか。</p>'+
+        '<p><b>Q2.</b> あなたの職場のサービスにも、この「2cmの段差」はありませんか。多数派には見えず、当事者だけが毎回止まる手順を挙げてください。</p>'+
+        '<p><b>Q3.</b> 人の親切で成立している運用を、構造で成立する仕組みに変えるとしたら、最初の一歩は何ですか。</p>'+
+        '<hr><p class="sub">ベビーカーだけの話ではありません。車いす・スーツケース・松葉杖・高齢の方——同じ地形で止まる人はもっと広い。</p></div>'+
+      '<div class="card"><h2>体験のつぎに</h2>'+
+        '<p>感想で終わらせないために、実際の駅を5軸で採点する調査票があります。悪い駅を晒すのではなく、<b>良い駅を表彰する</b>ための調査です。</p>'+
+        '<p><a href="https://kazuma5313.github.io/stroller-station-survey/" target="_blank" rel="noopener">▶ ベビーカーで行ける駅 調査票（プロトタイプ）</a></p></div>'+
+      '<button class="btn wide" onclick="Flow.start()">もう一度</button>'+
+      '<button class="btn wide ghost" onclick="show(\'s-title\')">タイトルへ</button>';
+    show('s-final');
+  }
+};
+function finish(){
+  if(G.phase!=='run') return;
+  G.phase='done';
+  for(const k in IN) IN[k]=0;
+  const gt=G.ghost.done?G.ghostT:(G.C.goalZ-G.C.ghost.pts[0][1])/G.C.ghost.sp;
+  G.results.push({course:G.C.name,time:G.t,ghost:gt,blocked:G.blocked,bumps:G.bumps,
+                  awakeT:G.awakeT,lifts:G.lifts,stam:P.stam});
+  setBig('ゴール');
+  setTimeout(()=>{ setBig(''); $('play').classList.remove('on'); Flow.debrief(); },900);
+}
+function show(id){
+  document.querySelectorAll('.screen').forEach(e=>e.classList.remove('on'));
+  $('play').classList.remove('on');
+  $(id).classList.add('on');
+  window.scrollTo(0,0);
+}
+resize();
+// 検証用フック
+window.__dbg={G,P,IN,COURSES,step,Flow,finish};
+</script>
+</body>
+</html>
