@@ -804,9 +804,7 @@
       var w = document.createElement("div");
       w.appendChild(el('<p class="eyebrow">質問 3</p>'));
       w.appendChild(el('<h1>どんなところが「便利だった」ですか？</h1>'));
-      w.appendChild(el('<p class="lede">あてはまるものすべてを選んでください。<br>' +
-        '<span class="note" style="margin:0">この調査で評価するのは<strong>駅の設備と構造だけ</strong>です。' +
-        '人の対応はその日によって変わってしまうため、点数には入れていません。</span></p>'));
+      w.appendChild(el('<p class="lede">あてはまるものすべてを選んでください。</p>'));
       w.appendChild(checkList(HELPED, "q2", state.q2, function () { save(); renderNav(); }));
       return w;
     },
