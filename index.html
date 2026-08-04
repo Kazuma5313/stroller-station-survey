@@ -94,7 +94,7 @@
 
   main {
     flex: 1;
-    padding: var(--s5) var(--s5) var(--s7);
+    padding: var(--s5) var(--s5) var(--s6);
     animation: rise .24s ease-out;
   }
   @keyframes rise { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
@@ -828,7 +828,7 @@
     axes: function () {
       var w = document.createElement("div");
       w.appendChild(el('<p class="eyebrow">質問 4</p>'));
-      w.appendChild(el('<h1>' + esc(stationLabel()) + 'は、<br>どうでしたか？</h1>'));
+      w.appendChild(el('<h1>' + esc(stationLabel()) + 'は、どうでしたか？</h1>'));
 
       /* 8つを1画面に並べると縦に長くなりすぎるので、1つずつ大きく出す */
       var i = state.axisIdx;
