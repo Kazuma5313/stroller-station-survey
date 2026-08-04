@@ -1,3 +1,14 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<!-- これが無いと、スマホは「画面幅980px」とみなしてページ全体を縮小表示する。
+     文字が小さくなり、左右に余白ができ、タップ領域も縮む -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- スマホのブラウザ上下のバーも同じ生成り色にして、黒い帯が出ないようにする -->
+<meta name="theme-color" content="#F7F2EC">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="ベビーカーで行ける駅ランキングの匿名アンケート">
 <title>ベビーカーで、行けた駅。｜アンケート動作見本</title>
 <style>
   /* ── やわらかい配色。ダークモードは使わない（黒は威圧感があるため） ── */
@@ -334,6 +345,8 @@
   .btn:focus-visible { outline: 3px solid var(--accent-wash); outline-offset: 2px; }
 </style>
 
+</head>
+<body>
 <div class="demo-bar">動作見本（プロトタイプ）｜入力内容はどこにも送信されません</div>
 
 <div class="app">
@@ -1237,3 +1250,5 @@
   }
 })();
 </script>
+</body>
+</html>
