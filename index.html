@@ -139,41 +139,59 @@
   .opt.sel { border-color: var(--accent); background: var(--accent-wash); font-weight: 700; }
   .opt:focus-within { outline: 3px solid var(--accent-wash); outline-offset: 1px; }
 
-  /* ── 評価マトリクス（8軸）：1行をコンパクトに ───────────── */
-  .matrix { display: flex; flex-direction: column; gap: 10px; margin-top: var(--s4); }
-  .mrow {
-    border: 2px solid var(--rule); border-radius: 14px;
-    padding: 12px 13px 13px;
-    scroll-margin-top: 84px;
-    transition: border-color .15s, background .15s;
+  /* ── 評価（8軸を1つずつ大きく出す。スクロールさせない） ───────────── */
+  .adots { display: flex; gap: 6px; margin: var(--s3) 0 8px; }
+  .adot {
+    flex: 1; min-width: 0; height: 34px;
+    border: 2px solid var(--rule); background: var(--surface); color: var(--ink-faint);
+    border-radius: 9px; font: inherit; font-size: .78rem; font-weight: 700;
+    cursor: pointer; transition: all .15s; padding: 0;
+    -webkit-tap-highlight-color: transparent;
   }
-  .mrow.answered { border-color: var(--accent); background: #FCFEFD; }
-  .mtitle { font-weight: 700; font-size: 1.02rem; line-height: 1.45; }
-  .msub { color: var(--ink-soft); font-size: .84rem; line-height: 1.55; margin: 2px 0 10px; }
-  .mopts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
-  .mbtn {
-    min-height: 46px;
+  .adot.done { background: var(--accent-wash); border-color: var(--accent); color: var(--accent-deep); }
+  .adot.now  { background: var(--accent); border-color: var(--accent); color: #fff; transform: scale(1.06); }
+  .acount { font-size: .85rem; color: var(--ink-soft); margin: 0 0 var(--s3); }
+  .acount strong { color: var(--accent-deep); }
+
+  .acard {
+    border: 2px solid var(--rule); border-radius: 18px;
+    padding: var(--s5) var(--s4) var(--s4);
+    background: var(--surface);
+    text-align: center;
+  }
+  .atitle { font-size: 1.28rem; font-weight: 700; line-height: 1.5; }
+  .asub { color: var(--ink-soft); font-size: .93rem; line-height: 1.65; margin: 8px 0 var(--s5); }
+  .aopts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .abtn {
+    min-height: 66px;
     border: 2px solid var(--rule); background: var(--surface); color: var(--ink-soft);
-    border-radius: 11px; padding: 6px 2px; font: inherit; font-size: .92rem; font-weight: 700;
+    border-radius: 14px; padding: 8px 2px; font: inherit; font-size: 1rem; font-weight: 700;
     cursor: pointer; transition: all .15s;
     -webkit-tap-highlight-color: transparent;
   }
-  .mbtn[data-v="2"].on { background: var(--good); border-color: var(--good); color: #fff; }
-  .mbtn[data-v="1"].on { background: var(--mid);  border-color: var(--mid);  color: #fff; }
-  .mbtn[data-v="0"].on { background: var(--poor); border-color: var(--poor); color: #fff; }
-  .mna {
-    width: 100%; margin-top: 7px; min-height: 38px;
+  .abtn[data-v="2"].on { background: var(--good); border-color: var(--good); color: #fff; }
+  .abtn[data-v="1"].on { background: var(--mid);  border-color: var(--mid);  color: #fff; }
+  .abtn[data-v="0"].on { background: var(--poor); border-color: var(--poor); color: #fff; }
+  .ana {
+    width: 100%; margin-top: 8px; min-height: 46px;
     border: 2px dashed var(--rule); background: transparent; color: var(--ink-faint);
-    border-radius: 11px; padding: 4px; font: inherit; font-size: .85rem;
+    border-radius: 12px; font: inherit; font-size: .92rem;
     cursor: pointer; transition: all .15s;
     -webkit-tap-highlight-color: transparent;
   }
-  .mna.on { background: var(--ink-faint); border-style: solid; border-color: var(--ink-faint); color: #fff; }
-  .mcount {
-    font-size: .87rem; color: var(--accent-deep); font-weight: 700;
-    background: var(--accent-wash); border-radius: 99px;
-    padding: 5px 14px; display: inline-block; margin-top: var(--s3);
-    font-variant-numeric: tabular-nums;
+  .ana.on { background: var(--ink-faint); border-style: solid; border-color: var(--ink-faint); color: #fff; }
+
+  .amove { display: flex; justify-content: space-between; margin-top: var(--s3); }
+  .alink {
+    background: none; border: 0; color: var(--accent-deep);
+    font: inherit; font-size: .92rem; font-weight: 700;
+    padding: 10px 4px; cursor: pointer; min-height: 44px;
+  }
+  .amove .alink:only-child { margin-left: auto; }
+  .adone {
+    background: var(--accent-wash); color: var(--accent-deep);
+    border-radius: 12px; padding: 11px var(--s4); margin: var(--s3) 0 0;
+    font-size: .92rem; font-weight: 700; text-align: center;
   }
 
   /* ── 入力 ───────────── */
@@ -420,7 +438,7 @@
   var SAVE_KEY = "stroller-station-survey-v1";
   var state = {
     q1: null, q2: [], q2b: [], station: "", gate: "",
-    axes: {}, comment: "",
+    axes: {}, axisIdx: 0, comment: "",
     consentSite: false, consentPress: false, credit: "",
     tStation: "", tItems: [], tDetail: "", tFix: "",
     consentOperator: null,
@@ -454,7 +472,7 @@
     });
     state = {
       q1: null, q2: [], q2b: [], station: "", gate: "",
-      axes: {}, comment: "",
+      axes: {}, axisIdx: 0, comment: "",
       consentSite: false, consentPress: false, credit: "",
       tStation: "", tItems: [], tDetail: "", tFix: "",
       consentOperator: null,
@@ -810,59 +828,79 @@
     axes: function () {
       var w = document.createElement("div");
       w.appendChild(el('<p class="eyebrow">質問 4</p>'));
-      w.appendChild(el('<h1>' + esc(stationLabel()) + 'は、ベビーカーで使ってみてどうでしたか？</h1>'));
-      w.appendChild(el('<p class="lede">8つのことを、ひとつずつ教えてください。<br>使わなかったものは「使わなかった」でだいじょうぶです。</p>'));
-      var m = el('<div class="matrix"></div>');
-      AXES.forEach(function (a) {
-        var row = el('<div class="mrow' + (state.axes[a.id] !== undefined ? " answered" : "") + '">' +
-          '<div class="mtitle">' + esc(a.t) + '</div><div class="msub">' + esc(a.s) + '</div></div>');
-        var opts = el('<div class="mopts" role="group" aria-label="' + esc(a.t) + '"></div>');
-        function clear() { row.querySelectorAll(".mbtn, .mna").forEach(function (x) { x.classList.remove("on"); }); }
-        AXIS_OPTS.forEach(function (o) {
-          var b = el('<button type="button" class="mbtn' + (state.axes[a.id] === o.v ? " on" : "") +
-            '" data-v="' + o.v + '">' + o.l + '</button>');
-          b.addEventListener("click", function () {
-            state.axes[a.id] = o.v; save(); clear(); b.classList.add("on");
-            row.classList.add("answered"); renderNav();
-          });
-          opts.appendChild(b);
-        });
-        row.appendChild(opts);
-        var na = el('<button type="button" class="mna' + (state.axes[a.id] === AXIS_NA ? " on" : "") +
-          '">使わなかった</button>');
-        na.addEventListener("click", function () {
-          state.axes[a.id] = AXIS_NA; save(); clear(); na.classList.add("on");
-          row.classList.add("answered"); renderNav();
-        });
-        row.appendChild(na);
-        m.appendChild(row);
-      });
-      w.appendChild(m);
+      w.appendChild(el('<h1>' + esc(stationLabel()) + 'は、<br>どうでしたか？</h1>'));
 
-      /* 何個答えたかを常に見せて、8行の長さを心理的に短くする */
-      var counter = el('<div class="mcount"></div>');
-      function refresh() {
-        var done = userScore().answered;
-        counter.textContent = done === AXES.length
-          ? "8つとも答えました。ありがとうございます"
-          : "8つのうち " + done + " つ回答";
-      }
-      refresh();
-      w.appendChild(counter);
-
-      /* 答えたら次の未回答へ自動で送る。指を動かす量を減らすため */
-      m.addEventListener("click", function () {
-        refresh();
-        var rows = m.querySelectorAll(".mrow");
-        for (var i = 0; i < AXES.length; i++) {
-          if (state.axes[AXES[i].id] === undefined) {
-            rows[i].scrollIntoView({ behavior: "smooth", block: "center" });
-            return;
-          }
+      /* 8つを1画面に並べると縦に長くなりすぎるので、1つずつ大きく出す */
+      var i = state.axisIdx;
+      if (typeof i !== "number" || i < 0 || i >= AXES.length) {
+        i = 0;
+        for (var k = 0; k < AXES.length; k++) {
+          if (state.axes[AXES[k].id] === undefined) { i = k; break; }
         }
+      }
+      var a = AXES[i];
+
+      /* 進み具合。丸をタップすればその項目に飛べる */
+      var dots = el('<div class="adots" role="tablist" aria-label="8つの項目"></div>');
+      AXES.forEach(function (x, n) {
+        var d = el('<button type="button" class="adot' +
+          (state.axes[x.id] !== undefined ? " done" : "") + (n === i ? " now" : "") +
+          '" aria-label="' + (n + 1) + 'つめ ' + esc(x.t) + '">' + (n + 1) + '</button>');
+        d.addEventListener("click", function () { state.axisIdx = n; save(); render(); });
+        dots.appendChild(d);
       });
-      w.appendChild(el('<p class="note">「使わなかった」を選んだものは、点数の集計から外れます。<br>' +
-        '使っていない設備で評価が下がることはありません。</p>'));
+      w.appendChild(dots);
+      w.appendChild(el('<p class="acount">8つのうち <strong>' + (i + 1) + 'つめ</strong>' +
+        '（回答済み ' + userScore().answered + ' / 8）</p>'));
+
+      var card = el('<div class="acard"></div>');
+      card.appendChild(el('<div class="atitle">' + esc(a.t) + '</div>'));
+      card.appendChild(el('<div class="asub">' + esc(a.s) + '</div>'));
+
+      function choose(v) {
+        state.axes[a.id] = v;
+        var next = -1;
+        for (var n = 0; n < AXES.length; n++) {
+          if (state.axes[AXES[n].id] === undefined) { next = n; break; }
+        }
+        state.axisIdx = next >= 0 ? next : i;   /* 未回答があればそこへ、なければ留まる */
+        save(); render();
+      }
+
+      var opts = el('<div class="aopts" role="group" aria-label="' + esc(a.t) + '"></div>');
+      AXIS_OPTS.forEach(function (o) {
+        var b = el('<button type="button" class="abtn' +
+          (state.axes[a.id] === o.v ? " on" : "") + '" data-v="' + o.v + '">' + o.l + '</button>');
+        b.addEventListener("click", function () { choose(o.v); });
+        opts.appendChild(b);
+      });
+      card.appendChild(opts);
+
+      var na = el('<button type="button" class="ana' +
+        (state.axes[a.id] === AXIS_NA ? " on" : "") + '">使わなかった</button>');
+      na.addEventListener("click", function () { choose(AXIS_NA); });
+      card.appendChild(na);
+      w.appendChild(card);
+
+      var move = el('<div class="amove"></div>');
+      if (i > 0) {
+        var prev = el('<button type="button" class="alink">← ひとつ前</button>');
+        prev.addEventListener("click", function () { state.axisIdx = i - 1; save(); render(); });
+        move.appendChild(prev);
+      }
+      if (i < AXES.length - 1) {
+        var nx = el('<button type="button" class="alink">つぎへ →</button>');
+        nx.addEventListener("click", function () { state.axisIdx = i + 1; save(); render(); });
+        move.appendChild(nx);
+      }
+      w.appendChild(move);
+
+      if (userScore().answered === AXES.length) {
+        w.appendChild(el('<p class="adone">8つとも答えました。下の「次へ」に進めます</p>'));
+      } else {
+        w.appendChild(el('<p class="note">使わなかったものは「使わなかった」でだいじょうぶです。' +
+          '点数の集計から外れるので、評価が下がることはありません。</p>'));
+      }
       return w;
     },
 
