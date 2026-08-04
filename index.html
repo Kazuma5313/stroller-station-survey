@@ -36,13 +36,14 @@
   }
 
   * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
+  /* rem の基準は html。ここを上げないと rem 指定が 16px 基準のままになる */
+  html { font-size: 17px; -webkit-text-size-adjust: 100%; }
   body {
     margin: 0;
     background: var(--ground);
     color: var(--ink);
     font-family: var(--f-body);
-    font-size: 17px;          /* スマホで読みやすい下限 */
+    font-size: 1rem;
     line-height: 1.75;
     letter-spacing: .01em;
   }
