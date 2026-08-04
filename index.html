@@ -58,14 +58,15 @@
     border-bottom: 1px solid #F0DFCC;
   }
 
+  /* 画面の高さいっぱいに伸ばさない。伸ばすと本文の下に大きな空白ができ、
+     ボタンが画面のずっと下に追いやられてしまう */
   .app {
     max-width: var(--maxw);
     margin: 0 auto;
-    min-height: 100vh;
-    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     background: var(--surface);
+    box-shadow: 0 0 0 1px rgba(62,55,51,.04);
   }
 
   /* ── 進捗（路線図型） ───────────── */
@@ -93,8 +94,7 @@
   .rail-label.opt { color: var(--private); }
 
   main {
-    flex: 1;
-    padding: var(--s5) var(--s5) var(--s6);
+    padding: var(--s5) var(--s5) var(--s5);
     animation: rise .24s ease-out;
   }
   @keyframes rise { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
@@ -108,13 +108,14 @@
     margin: 0 0 var(--s2); font-weight: 700;
   }
   .eyebrow.priv { color: var(--private); }
+  h1:focus, h1:focus-visible { outline: none; }
   h1 {
     font-size: 1.44rem; line-height: 1.55; font-weight: 700;
     margin: 0 0 var(--s3); text-wrap: balance; letter-spacing: .005em;
   }
   h2 { font-size: 1.2rem; line-height: 1.6; margin: 0 0 var(--s3); font-weight: 700; }
-  .lede { color: var(--ink-soft); margin: 0 0 var(--s4); font-size: .95rem; line-height: 1.7; }
-  .note { color: var(--ink-soft); font-size: .87rem; line-height: 1.7; margin: var(--s3) 0 0; }
+  .lede { color: var(--ink-soft); margin: 0 0 var(--s4); font-size: 1rem; line-height: 1.75; }
+  .note { color: var(--ink-soft); font-size: .93rem; line-height: 1.75; margin: var(--s3) 0 0; }
   .optional-tag {
     display: inline-block; font-size: .72rem;
     background: var(--accent-wash); color: var(--accent-deep);
@@ -242,7 +243,7 @@
   }
   .drop strong { display: block; color: var(--accent-deep); font-weight: 700; margin-bottom: 3px; font-size: 1rem; }
 
-  .guide { background: var(--accent-wash); border-radius: 14px; padding: var(--s4); margin-top: var(--s4); font-size: .9rem; line-height: 1.8; }
+  .guide { background: var(--accent-wash); border-radius: 14px; padding: var(--s4); margin-top: var(--s4); font-size: .96rem; line-height: 1.8; }
   .guide ol, .guide ul { margin: var(--s2) 0 0; padding-left: 1.25em; }
   .guide li { margin-bottom: 5px; }
   .guide .g-head { font-weight: 700; }
@@ -302,7 +303,7 @@
 
   /* ── フッター：大きく、親指が届く位置に ───────────── */
   footer {
-    position: sticky; bottom: 0;
+    position: sticky; bottom: 0; z-index: 3;
     background: var(--surface);
     border-top: 1px solid var(--rule);
     padding: var(--s3) var(--s5);
