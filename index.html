@@ -162,7 +162,7 @@
   .opt.sel { border-color: var(--sign); background: var(--sign-wash); }
   .opt:focus-within { outline: 2px solid var(--sign); outline-offset: 2px; }
 
-  /* ── 5軸マトリクス ───────────── */
+  /* ── 評価マトリクス（8軸） ───────────── */
   .matrix { display: flex; flex-direction: column; gap: var(--s3); margin-top: var(--s4); }
   .mrow { border: 1px solid var(--rule); border-radius: 6px; padding: var(--s3) var(--s4) var(--s4); }
   .mrow.answered { border-color: var(--sign); }
@@ -178,6 +178,14 @@
   .mbtn[data-v="2"].on { background: var(--good); border-color: var(--good); color: #fff; }
   .mbtn[data-v="1"].on { background: var(--mid);  border-color: var(--mid);  color: #fff; }
   .mbtn[data-v="0"].on { background: var(--poor); border-color: var(--poor); color: #fff; }
+  .mna {
+    width: 100%; margin-top: var(--s2);
+    border: 1px dashed var(--rule); background: transparent; color: var(--ink-faint);
+    border-radius: 5px; padding: 7px 4px; font: inherit; font-size: .78rem;
+    cursor: pointer; transition: all .15s;
+  }
+  .mna:hover { border-color: var(--ink-faint); }
+  .mna.on { background: var(--ink-faint); border-style: solid; border-color: var(--ink-faint); color: var(--surface); }
 
   /* ── 入力 ───────────── */
   input[type=text], input[type=email], textarea {
@@ -377,7 +385,9 @@
     "おむつ替えができる場所があった",
     "授乳室・ベビールームがあった",
     "ベビーカーのまま入れる広いトイレがあった",
+    "トイレが清潔で、気持ちよく使えた",
     "座って休める場所があった",
+    "駅ナカ・駅ビルの商業施設で、買い物や食事がまとめて済んだ",
     "エレベーターの場所を示す案内が、わかりやすかった"
   ];
   var TROUBLE = [
@@ -393,23 +403,28 @@
     "案内表示がわからず、迷った",
     "目的の出口にエレベーターがなく、地上に出られなかった"
   ];
-  /* 5軸すべて駅の構造・設備・案内設計。人の対応は点数に入れない */
+  /* 評価軸8つ（チームレビューで確定）。⑧のみ人的サポートを含む */
   var AXES = [
-    { id:"a1", t:"たどりつける", s:"改札からホーム・地上まで、エレベーターで途切れず行けた" },
-    { id:"a2", t:"待たない",     s:"エレベーターの数や広さが足りていた" },
-    { id:"a3", t:"こわくない",   s:"段差・すき間・通路の狭さで、危ない思いをしなかった" },
-    { id:"a4", t:"ひと息つける", s:"おむつ替え・授乳・休憩ができる場所があった" },
-    { id:"a5", t:"迷わない",     s:"エレベーターやベビールームの場所が、案内表示ですぐわかった" }
+    { id:"a1", t:"バリアフリー度",        s:"ベビーカーを折り畳まずに移動できたか" },
+    { id:"a2", t:"移動負荷",              s:"遠回りせず、最短ルートで移動できたか" },
+    { id:"a3", t:"昇降移動の冗長性",      s:"エレベーターなどの数は足りていたか。使えないときの代わりのルートがあったか" },
+    { id:"a4", t:"混雑耐性",              s:"優先レーンや待機できる場所があり、混んでいても移動できたか" },
+    { id:"a5", t:"支援機能",              s:"多目的トイレ・ケアルームなどがあり、使いやすかったか" },
+    { id:"a6", t:"視覚情報のわかりやすさ", s:"案内表示を見て、迷わず目的の場所にたどりつけたか" },
+    { id:"a7", t:"他手段との接続性",      s:"バス乗り場や駐車場へ、そのまま移動できたか" },
+    { id:"a8", t:"人的サポートの充実度",  s:"駅員さんの移動支援など、人の助けを得られたか" }
   ];
   var AXIS_OPTS = [
     { v:2, l:"よかった" }, { v:1, l:"ふつう" }, { v:0, l:"物足りない" }
   ];
+  /* 使っていない設備を0点にされると点数が歪むので、集計から外す逃げ道を置く */
+  var AXIS_NA = "na";
 
   /* ══ 状態 ══ */
   var SAVE_KEY = "stroller-station-survey-v1";
   var state = {
     q1: null, q2: [], q2b: [], station: "", gate: "",
-    axes: {}, comment: "", recommend: null,
+    axes: {}, comment: "",
     consentSite: false, consentPress: false, credit: "",
     tStation: "", tItems: [], tDetail: "", tFix: "",
     consentOperator: null,
@@ -443,7 +458,7 @@
     });
     state = {
       q1: null, q2: [], q2b: [], station: "", gate: "",
-      axes: {}, comment: "", recommend: null,
+      axes: {}, comment: "",
       consentSite: false, consentPress: false, credit: "",
       tStation: "", tItems: [], tDetail: "", tFix: "",
       consentOperator: null,
@@ -475,12 +490,12 @@
   /* ══ フロー ══ */
   function flow() {
     var f = ["intro", "q1"];
-    if (state.q1 === "forget") f.push("q2b");
-    else f.push("q2", "q3", "q4", "q5", "q6", "q7");
+    if (state.q1 === "forget") f.push("wanted");
+    else f.push("station", "helped", "axes", "comment", "photo");
     f.push("profile", "email", "gap", "trouble", "fix", "troublePhoto", "result");
     return f;
   }
-  var REQUIRED = { q1:1, q2:1, q3:1, q4:1, q6:1, q2b:1 };
+  var REQUIRED = { q1:1, station:1, helped:1, axes:1, wanted:1 };
   function requiredIds() { return flow().filter(function (s) { return REQUIRED[s]; }); }
 
   /* ══ 描画ヘルパ ══ */
@@ -659,13 +674,10 @@
         q3_station: state.station.trim().replace(/駅$/, ""),
         q3_gate: state.gate,
         q4_axes: state.axes,
-        q4_total: (function () {
-          var t = 0, n = 0;
-          AXES.forEach(function (a) { if (typeof state.axes[a.id] === "number") { t += state.axes[a.id]; n++; } });
-          return n === AXES.length ? t : null;
-        })(),
+        q4_scoredCount: userScore().scored,
+        q4_avg: userScore().avg,
+        q4_score10: userScore().score10,
         q5_comment: state.comment,
-        q6_recommend: state.recommend,
         q7_consentSite: state.consentSite,
         q7_consentPress: state.consentPress,
         q7_credit: state.credit,
@@ -711,9 +723,18 @@
   /* ══ 回答の充足チェック ══
      点数の集計は運営側でまとめて行う。回答者には順位も点数も返さない。 */
   function userScore() {
-    var n = 0;
-    AXES.forEach(function (a) { if (typeof state.axes[a.id] === "number") n++; });
-    return { answered: n };
+    var n = 0, scored = 0, sum = 0;
+    AXES.forEach(function (a) {
+      var v = state.axes[a.id];
+      if (v === undefined) return;
+      n++;                                   /* 「使わなかった」も回答済みとして数える */
+      if (typeof v === "number") { scored++; sum += v; }
+    });
+    return {
+      answered: n, scored: scored,
+      avg: scored ? sum / scored : null,             /* 0〜2 */
+      score10: scored ? (sum / scored) * 5 : null    /* 0〜10 換算 */
+    };
   }
 
   /* ══ 画面 ══ */
@@ -723,10 +744,10 @@
       var w = document.createElement("div");
       w.appendChild(el('<p class="eyebrow">ベビーカーで行ける駅ランキング</p>'));
       w.appendChild(el('<h1>ベビーカーで、行けた駅。</h1>'));
-      w.appendChild(el('<p class="lede">「あの駅、助かった」を全国から集めて、ランキングをつくります。<br>' +
+      w.appendChild(el('<p class="lede">「この駅、便利だった！」を全国から集めて、ランキングをつくります。<br>' +
         '評価するのは<strong>駅の設備と構造</strong>だけ。あなたの1票が、明日そこを通る親子の道案内になります。</p>'));
       w.appendChild(el('<div class="guide"><span class="g-head">お答えいただくこと</span>' +
-        '<ul><li>よかった駅を<strong>1駅だけ</strong>（必須5問・約90秒）</li>' +
+        '<ul><li>便利だった駅を<strong>1駅だけ</strong>（必須4問・約90秒）</li>' +
         '<li>写真があれば1枚（任意）</li>' +
         '<li>困った駅も、よければ（任意・<strong>公開しません</strong>）</li></ul></div>'));
       w.appendChild(el('<p class="note">匿名でお答えいただけます。途中でやめても、そこまでの内容は残ります。<br>' +
@@ -737,10 +758,10 @@
     q1: function () {
       var w = document.createElement("div");
       w.appendChild(el('<p class="eyebrow">質問 1</p>'));
-      w.appendChild(el('<h1>ベビーカーで駅を使っていて、「この駅、助かった」と感じたことはありますか？</h1>'));
+      w.appendChild(el('<h1>ベビーカーで駅を使っていて、「この駅、便利だった！」と感じたことはありますか？</h1>'));
       w.appendChild(radioList([
         { v:"yes",    l:"ある" },
-        { v:"partial",l:"駅全体というより、特定の設備に助けられたことがある" },
+        { v:"partial",l:"駅全体というより、特定の設備が便利だったことがある" },
         { v:"forget", l:"思い出せない" }
       ], state.q1, function (v) {
         if (state.q1 !== v) {
@@ -753,10 +774,10 @@
       return w;
     },
 
-    q2: function () {
+    helped: function () {
       var w = document.createElement("div");
-      w.appendChild(el('<p class="eyebrow">質問 2</p>'));
-      w.appendChild(el('<h1>どんなことが「助かった」ですか？</h1>'));
+      w.appendChild(el('<p class="eyebrow">質問 3</p>'));
+      w.appendChild(el('<h1>どんなところが「便利だった」ですか？</h1>'));
       w.appendChild(el('<p class="lede">あてはまるものすべてを選んでください。<br>' +
         '<span class="note" style="margin:0">この調査で評価するのは<strong>駅の設備と構造だけ</strong>です。' +
         '人の対応はその日によって変わってしまうため、点数には入れていません。</span></p>'));
@@ -764,18 +785,18 @@
       return w;
     },
 
-    q2b: function () {
+    wanted: function () {
       var w = document.createElement("div");
       w.appendChild(el('<p class="eyebrow">質問 2</p>'));
-      w.appendChild(el('<h1>駅名は思い出せなくて大丈夫です。<br>駅に「これがあったら助かる」ものはどれですか？</h1>'));
+      w.appendChild(el('<h1>駅名は思い出せなくて大丈夫です。<br>駅に「これがあったら便利」なものはどれですか？</h1>'));
       w.appendChild(el('<p class="lede">あてはまるものすべてを選んでください。鉄道会社への要望としてお届けします。</p>'));
       w.appendChild(checkList(HELPED, "q2b", state.q2b, function () { save(); renderNav(); }));
       return w;
     },
 
-    q3: function () {
+    station: function () {
       var w = document.createElement("div");
-      w.appendChild(el('<p class="eyebrow">質問 3</p>'));
+      w.appendChild(el('<p class="eyebrow">質問 2</p>'));
       w.appendChild(el('<h1>その駅を教えてください。</h1>'));
       w.appendChild(el('<p class="lede">いちばん印象に残っている <strong>1駅だけ</strong> で大丈夫です。</p>'));
       w.appendChild(stationField(state.station, function (v) { state.station = v; save(); }));
@@ -789,32 +810,43 @@
       return w;
     },
 
-    q4: function () {
+    axes: function () {
       var w = document.createElement("div");
       w.appendChild(el('<p class="eyebrow">質問 4</p>'));
       w.appendChild(el('<h1>' + esc(stationLabel()) + 'は、ベビーカーで使ってみてどうでしたか？</h1>'));
-      w.appendChild(el('<p class="lede">5つの項目それぞれについて、いちばん近いものを選んでください。</p>'));
+      w.appendChild(el('<p class="lede">8つの項目それぞれについて、いちばん近いものを選んでください。</p>'));
       var m = el('<div class="matrix"></div>');
       AXES.forEach(function (a) {
-        var row = el('<div class="mrow' + (typeof state.axes[a.id] === "number" ? " answered" : "") + '">' +
+        var row = el('<div class="mrow' + (state.axes[a.id] !== undefined ? " answered" : "") + '">' +
           '<div class="mtitle">' + esc(a.t) + '</div><div class="msub">' + esc(a.s) + '</div></div>');
         var opts = el('<div class="mopts" role="group" aria-label="' + esc(a.t) + '"></div>');
+        function clear() { row.querySelectorAll(".mbtn, .mna").forEach(function (x) { x.classList.remove("on"); }); }
         AXIS_OPTS.forEach(function (o) {
-          var b = el('<button type="button" class="mbtn' + (state.axes[a.id] === o.v ? " on" : "") + '" data-v="' + o.v + '">' + o.l + '</button>');
+          var b = el('<button type="button" class="mbtn' + (state.axes[a.id] === o.v ? " on" : "") +
+            '" data-v="' + o.v + '">' + o.l + '</button>');
           b.addEventListener("click", function () {
-            state.axes[a.id] = o.v; save();
-            opts.querySelectorAll(".mbtn").forEach(function (x) { x.classList.remove("on"); });
-            b.classList.add("on"); row.classList.add("answered"); renderNav();
+            state.axes[a.id] = o.v; save(); clear(); b.classList.add("on");
+            row.classList.add("answered"); renderNav();
           });
           opts.appendChild(b);
         });
-        row.appendChild(opts); m.appendChild(row);
+        row.appendChild(opts);
+        var na = el('<button type="button" class="mna' + (state.axes[a.id] === AXIS_NA ? " on" : "") +
+          '">使わなかった・わからない</button>');
+        na.addEventListener("click", function () {
+          state.axes[a.id] = AXIS_NA; save(); clear(); na.classList.add("on");
+          row.classList.add("answered"); renderNav();
+        });
+        row.appendChild(na);
+        m.appendChild(row);
       });
       w.appendChild(m);
+      w.appendChild(el('<p class="note">使わなかった設備は「使わなかった・わからない」を選んでください。' +
+        '<strong>その項目は点数の集計から外します。</strong></p>'));
       return w;
     },
 
-    q5: function () {
+    comment: function () {
       var w = document.createElement("div");
       w.appendChild(el('<p class="eyebrow">質問 5<span class="optional-tag">任意</span></p>'));
       w.appendChild(el('<h1>これから' + esc(stationLabel()) + 'を使う親子に、ひとことお願いします。</h1>'));
@@ -825,22 +857,10 @@
       return w;
     },
 
-    q6: function () {
+    photo: function () {
       var w = document.createElement("div");
-      w.appendChild(el('<p class="eyebrow">質問 6</p>'));
-      w.appendChild(el('<h1>この駅を、ほかの親子にすすめたいですか？</h1>'));
-      w.appendChild(radioList([
-        { v:"strong", l:"ぜひすすめたい" },
-        { v:"mild",   l:"まあすすめられる" },
-        { v:"neutral",l:"どちらでもない" }
-      ], state.recommend, function (v) { state.recommend = v; save(); renderNav(); }));
-      return w;
-    },
-
-    q7: function () {
-      var w = document.createElement("div");
-      w.appendChild(el('<p class="eyebrow">質問 7<span class="optional-tag">任意</span></p>'));
-      w.appendChild(el('<h1>「助かったところ」の写真があれば、ぜひ見せてください。</h1>'));
+      w.appendChild(el('<p class="eyebrow">質問 6<span class="optional-tag">任意</span></p>'));
+      w.appendChild(el('<h1>「便利だったところ」の写真があれば、ぜひ見せてください。</h1>'));
       w.appendChild(el('<p class="lede">1枚でも大歓迎です。あとから追加することもできます。</p>'));
       w.appendChild(photoField("good", 3));
       w.appendChild(el('<div class="guide"><span class="g-head">撮ってほしいのはこの3つです</span>' +
@@ -884,7 +904,7 @@
 
     trouble: function () {
       var w = document.createElement("div");
-      w.appendChild(el('<p class="eyebrow priv">質問 10<span class="optional-tag">任意・非公開</span></p>'));
+      w.appendChild(el('<p class="eyebrow priv">質問 9<span class="optional-tag">任意・非公開</span></p>'));
       w.appendChild(el('<h1>ベビーカーで困った駅があれば、教えてください。</h1>'));
       w.appendChild(stationField(state.tStation, function (v) { state.tStation = v; save(); }));
       w.appendChild(el('<p class="field-label" style="margin-top:24px">どんなことに困りましたか？（あてはまるものすべて）</p>'));
@@ -896,7 +916,7 @@
 
     fix: function () {
       var w = document.createElement("div");
-      w.appendChild(el('<p class="eyebrow priv">質問 11<span class="optional-tag">任意・非公開</span></p>'));
+      w.appendChild(el('<p class="eyebrow priv">質問 10<span class="optional-tag">任意・非公開</span></p>'));
       w.appendChild(el('<h1>「ここだけ直れば行けるのに」という点を、ひとつだけ挙げるとしたら？</h1>'));
       w.appendChild(el('<p class="lede">いちばん困っている1点だけで大丈夫です。鉄道会社にそのままお届けします。</p>'));
       w.appendChild(textarea(state.tFix, 80, "例）ホーム端のエレベーターがもう1基あれば、朝でも乗れます。", function (v) { state.tFix = v; save(); }));
@@ -905,7 +925,7 @@
 
     troublePhoto: function () {
       var w = document.createElement("div");
-      w.appendChild(el('<p class="eyebrow priv">質問 12<span class="optional-tag">任意・非公開</span></p>'));
+      w.appendChild(el('<p class="eyebrow priv">質問 11<span class="optional-tag">任意・非公開</span></p>'));
       w.appendChild(el('<h1>困った場所の写真があれば、添付してください。</h1>'));
       w.appendChild(el('<p class="lede">この写真は<strong>公開されません</strong>。「この段差です」の1枚が、文章10件よりも改善を動かします。</p>'));
       w.appendChild(photoField("bad", 3));
@@ -919,7 +939,7 @@
 
     profile: function () {
       var w = document.createElement("div");
-      w.appendChild(el('<p class="eyebrow">質問 8<span class="optional-tag">すべて任意</span></p>'));
+      w.appendChild(el('<p class="eyebrow">質問 7<span class="optional-tag">すべて任意</span></p>'));
       w.appendChild(el('<h1>さしつかえなければ、あなたのことも。</h1>'));
       [["childAge","お子さんの年齢","例：1歳と4歳"],
        ["freq","ベビーカーでの電車利用","例：週に2回くらい"],
@@ -936,7 +956,7 @@
 
     email: function () {
       var w = document.createElement("div");
-      w.appendChild(el('<p class="eyebrow">質問 9<span class="optional-tag">任意</span></p>'));
+      w.appendChild(el('<p class="eyebrow">質問 8<span class="optional-tag">任意</span></p>'));
       w.appendChild(el('<h1>ランキングができたら、お知らせしますか？</h1>'));
       w.appendChild(el('<p class="lede">写真をあとから追加したいときのご案内もお送りします。ほかの用途には使いません。</p>'));
       var f = el('<div class="field"></div>');
@@ -973,7 +993,7 @@
 
       w.appendChild(el('<p class="eyebrow">ありがとうございました</p>'));
       w.appendChild(el('<h1>' + (isForget
-        ? 'あなたの「あったら助かる」を、<br>受け取りました。'
+        ? 'あなたの「あったら便利」を、<br>受け取りました。'
         : 'あなたの回答を、<br>受け取りました。') + '</h1>'));
 
       /* 匿名であることを、終わりにもう一度伝える */
@@ -1053,12 +1073,11 @@
   /* ══ バリデーション ══ */
   function canAdvance() {
     var id = flow()[idx];
-    if (id === "q1")  return !!state.q1;
-    if (id === "q2")  return state.q2.length > 0;
-    if (id === "q2b") return state.q2b.length > 0;
-    if (id === "q3")  return state.station.trim().length > 0;
-    if (id === "q4")  return userScore().answered === AXES.length;
-    if (id === "q6")  return !!state.recommend;
+    if (id === "q1")     return !!state.q1;
+    if (id === "helped") return state.q2.length > 0;
+    if (id === "wanted") return state.q2b.length > 0;
+    if (id === "station")return state.station.trim().length > 0;
+    if (id === "axes")   return userScore().answered === AXES.length;
     return true;
   }
   function isOptional(id) { return !REQUIRED[id] && id !== "intro" && id !== "gap" && id !== "result"; }
