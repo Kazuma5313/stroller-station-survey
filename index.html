@@ -248,6 +248,16 @@
   .guide li { margin-bottom: 5px; }
   .guide .g-head { font-weight: 700; }
 
+  .tips { margin-top: var(--s3); }
+  .tips summary {
+    list-style: none; cursor: pointer;
+    color: var(--accent-deep); font-weight: 700; font-size: .95rem;
+    padding: 12px 0; min-height: 44px; display: flex; align-items: center; gap: 6px;
+  }
+  .tips summary::-webkit-details-marker { display: none; }
+  .tips summary::before { content: "＋"; font-weight: 700; }
+  .tips[open] summary::before { content: "－"; }
+
   .consents { display: flex; flex-direction: column; gap: 10px; margin-top: var(--s4); }
   .consent {
     display: flex; gap: var(--s3); align-items: flex-start;
@@ -922,16 +932,19 @@
       w.appendChild(el('<h1>「便利だったところ」の写真があれば、ぜひ見せてください。</h1>'));
       w.appendChild(el('<p class="lede">1枚でも大歓迎です。あとから追加することもできます。</p>'));
       w.appendChild(photoField("good", 3));
-      w.appendChild(el('<div class="guide"><span class="g-head">撮ってほしいのはこの3つです</span>' +
-        '<ol><li>エレベーターの場所がわかる引きの写真（改札やホームとの位置関係が写っていると最高です）</li>' +
+      w.appendChild(el('<p class="note"><strong>人が写らないように</strong>お願いします。' +
+        '位置情報は受け取った時点で自動的に消しています。</p>'));
+      var tips = el('<details class="tips"><summary>どんな写真がいい？ 撮り方のコツ</summary></details>');
+      tips.appendChild(el('<div class="guide"><span class="g-head">撮ってほしいのはこの3つ</span>' +
+        '<ol><li>エレベーターの場所がわかる引きの写真</li>' +
         '<li>ベビールーム・おむつ替え台</li>' +
         '<li>改札からの動線（通路の広さ、案内表示など）</li></ol></div>'));
-      w.appendChild(el('<div class="guide" style="background:transparent;border:1px solid var(--rule)">' +
-        '<span class="g-head">撮影のお願い</span><ul>' +
-        '<li><strong>人が写らないように</strong>お願いします。お子さんやご自身が写っている写真は掲載できません。</li>' +
-        '<li>駅係員の方の顔が写らないようご配慮ください。</li>' +
-        '<li>通行の妨げにならない場所から撮影してください。</li>' +
-        '<li>写真に含まれる<strong>位置情報は、受け取った時点で自動的に削除</strong>しています。</li></ul></div>'));
+      tips.appendChild(el('<div class="guide" style="background:transparent;border:1px solid var(--rule)">' +
+        '<span class="g-head">お願い</span><ul>' +
+        '<li>お子さんやご自身が写っている写真は掲載できません</li>' +
+        '<li>駅係員の方の顔が写らないようご配慮ください</li>' +
+        '<li>通行の妨げにならない場所から撮ってください</li></ul></div>'));
+      w.appendChild(tips);
       var cs = el('<div class="consents"></div>');
       cs.appendChild(consent("この写真を、駅のページに掲載することに同意します", state.consentSite, function (v) { state.consentSite = v; save(); }));
       cs.appendChild(consent("受賞発表やニュース記事など、企画の紹介のために使われることにも同意します", state.consentPress, function (v) { state.consentPress = v; save(); }));
