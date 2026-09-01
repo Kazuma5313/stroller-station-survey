@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F7F2EC">
+<meta name="description" content="ベビーカーで行ける駅ランキング｜アンケート結果の見え方デモ（架空サンプルデータ）">
+<meta name="robots" content="noindex, nofollow">
+<title>行けた駅さがし</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap');
+
+/* 配色はアンケート本体（prototype/index.html）と同じトークン。
+   同じサービスに見えないと、答えた人が結果ページで迷子になるため。
+   本体と同じく light 固定（黒背景の威圧感を避けるという企画の決定に合わせる）。 */
+:root {
+  color-scheme: light;
+
+  --ground:      #F7F2EC;
+  --ground-deep: #EFE7DD;
+  --surface:     #FFFFFF;
+  --ink:         #3E3733;
+  --ink-soft:    #7A6E66;
+  --ink-faint:   #A99B91;
+  --rule:        #EADFD4;
+
+  --accent:      #4E9C7F;
+  --accent-deep: #3B7A62;
+  --accent-wash: #EAF4EF;
+  --accent-glow: #DCEEE5;
+
+  --warm:        #E08B55;
+  --warm-wash:   #FBF0E6;
+
+  --f-disp: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN W4", system-ui, sans-serif;
+  --f-body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic Medium", system-ui, sans-serif;
+
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:22px; --s6:32px; --s7:44px;
+  --tap: 52px;
+  --appw: 25rem;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.75;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3 { font-family: var(--f-disp); font-weight: 700; line-height: 1.35; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; }
+input { font: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+
+/* 架空データであることは、どの画面でも消さない */
+.note {
+  background: var(--warm-wash); border-bottom: 1px solid #EBD9C4; color: #8A5A31;
+  font-size: 12px; font-weight: 700; text-align: center; padding: 6px 16px; line-height: 1.6;
+}
+
+.app { max-width: var(--appw); margin: 0 auto; padding: var(--s5) var(--s4) var(--s7); }
+
+/* ── 1. さがす画面 ── */
+.brand { display: flex; align-items: center; gap: 9px; justify-content: center; color: var(--accent-deep); }
+.brand svg { width: 26px; height: 26px; }
+.brand span { font-family: var(--f-disp); font-weight: 900; font-size: 16px; letter-spacing: .02em; }
+
+.ask { text-align: center; margin-top: var(--s6); }
+.ask h1 { font-size: 27px; font-weight: 900; }
+.ask p { margin-top: var(--s2); color: var(--ink-soft); font-size: 14.5px; }
+
+.searchbox {
+  display: flex; align-items: center; gap: var(--s2);
+  background: var(--surface); border: 2px solid var(--rule); border-radius: 18px;
+  padding: 0 var(--s3); margin-top: var(--s5); height: 60px;
+  box-shadow: 0 6px 18px -12px rgba(62,55,51,.35);
+  transition: border-color .15s, box-shadow .15s;
+}
+.searchbox:focus-within { border-color: var(--accent); box-shadow: 0 8px 22px -12px rgba(78,156,127,.55); }
+.searchbox svg { width: 22px; height: 22px; color: var(--ink-faint); flex: none; }
+.searchbox input {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: none;
+  font-family: var(--f-disp); font-weight: 700; font-size: 18px; color: var(--ink);
+}
+.searchbox input::placeholder { font-weight: 500; color: var(--ink-faint); }
+.clear {
+  flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--ground-deep);
+  color: var(--ink-soft); font-size: 16px; line-height: 34px; text-align: center;
+}
+.clear[hidden] { display: none; }
+
+.sug { list-style: none; margin: var(--s3) 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sug button {
+  width: 100%; text-align: left; display: grid; grid-template-columns: minmax(0,1fr) auto;
+  align-items: center; gap: var(--s2); min-height: var(--tap);
+  background: var(--surface); border: 1.5px solid var(--rule); border-radius: 14px; padding: 11px var(--s4);
+  transition: border-color .15s, transform .1s;
+}
+.sug button:hover { border-color: var(--accent); }
+.sug button:active { transform: scale(.99); }
+.sug .nm { display: block; font-family: var(--f-disp); font-weight: 700; font-size: 17px; line-height: 1.3; }
+.sug .pf { display: block; font-size: 11.5px; color: var(--ink-soft); line-height: 1.5; }
+.sug .cnt {
+  flex: none; font-size: 11.5px; font-weight: 700; white-space: nowrap;
+  color: var(--accent-deep); background: var(--accent-wash); border-radius: 999px; padding: 4px 10px;
+}
+.sug .cnt.zero { color: var(--ink-faint); background: var(--ground-deep); }
+.sug .none { padding: var(--s4) var(--s3); color: var(--ink-soft); font-size: 14px; }
+
+.pop { margin-top: var(--s6); }
+.pop h2 { font-size: 13px; color: var(--ink-soft); text-align: center; font-weight: 700; }
+.chips { display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: center; margin-top: var(--s3); }
+.chips button {
+  background: var(--surface); border: 1.5px solid var(--rule); border-radius: 999px;
+  padding: 10px 16px; font-family: var(--f-disp); font-weight: 700; font-size: 14.5px;
+  min-height: 44px; transition: border-color .15s, background .15s;
+}
+.chips button:hover { border-color: var(--accent); background: var(--accent-wash); }
+
+.tellus {
+  margin-top: var(--s7); text-align: center; border-top: 1px solid var(--rule); padding-top: var(--s5);
+}
+.tellus p { font-size: 13.5px; color: var(--ink-soft); }
+.link {
+  display: inline-block; margin-top: var(--s3); font-family: var(--f-disp); font-weight: 700;
+  font-size: 15px; color: var(--accent-deep); text-decoration: none;
+  border-bottom: 2px solid var(--accent-glow); padding-bottom: 2px;
+}
+.link:hover { border-color: var(--accent); }
+
+/* ── 2. 結果画面 ── */
+.back {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px;
+  font-family: var(--f-disp); font-weight: 700; font-size: 14.5px; color: var(--ink-soft);
+}
+.back:hover { color: var(--accent-deep); }
+
+.hero { text-align: center; margin-top: var(--s2); }
+.hero h1 { font-size: 30px; font-weight: 900; }
+.hero .pf { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+
+.score { position: relative; width: 132px; height: 132px; margin: var(--s4) auto 0; display: grid; place-items: center; }
+.score .disc { position: absolute; inset: 0; border-radius: 50%; background: var(--accent-wash); }
+.score .ring { position: absolute; inset: 0; transform: rotate(-90deg); }
+.score .num {
+  position: relative; font-family: var(--f-disp); font-weight: 900; font-size: 46px; line-height: 1;
+  color: var(--accent-deep); font-variant-numeric: tabular-nums;
+}
+.score .num small { font-size: 15px; font-weight: 700; color: var(--accent); margin-left: 2px; }
+.verdict { font-family: var(--f-disp); font-weight: 900; font-size: 19px; margin-top: var(--s3); }
+.voices { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+
+/* アイコン盤 */
+.board { margin-top: var(--s6); }
+.board-t { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); }
+.board-t h2 { font-size: 15px; }
+.board-t span { font-size: 11.5px; color: var(--ink-faint); }
+
+.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s3) var(--s1); margin-top: var(--s4); }
+.cell {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 4px 2px;
+  border-radius: 14px; width: 100%;
+}
+.cell .bulb {
+  width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center;
+  border: 2px solid var(--rule); background: var(--surface); color: var(--ink-faint);
+  transition: transform .18s ease, background .18s, border-color .18s, color .18s, box-shadow .18s;
+}
+.cell .bulb svg { width: 27px; height: 27px; }
+.cell .lb { font-size: 10.5px; line-height: 1.35; text-align: center; color: var(--ink-faint); letter-spacing: -.01em; }
+
+.cell.on  .bulb { background: var(--accent-glow); border-color: var(--accent-glow); color: var(--accent-deep); }
+.cell.on  .lb   { color: var(--ink-soft); }
+.cell.hot .bulb { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 6px 16px -8px rgba(78,156,127,.9); }
+.cell.hot .lb   { color: var(--accent-deep); font-weight: 700; }
+.cell[aria-pressed="true"] .bulb { transform: scale(1.09); }
+.cell[aria-pressed="true"] .lb { text-decoration: underline; text-underline-offset: 3px; }
+
+/* 点灯の演出：選んだ瞬間に、左上から順に光る */
+@keyframes pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+.grid.reveal .bulb { animation: pop .34s cubic-bezier(.2,1.3,.5,1) backwards; }
+
+.legend { display: flex; gap: var(--s3); justify-content: center; flex-wrap: wrap; margin-top: var(--s4); font-size: 11.5px; color: var(--ink-soft); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 13px; height: 13px; border-radius: 50%; display: inline-block; border: 2px solid var(--rule); background: var(--surface); }
+.legend i.on { background: var(--accent-glow); border-color: var(--accent-glow); }
+.legend i.hot { background: var(--accent); border-color: var(--accent); }
+
+.detail {
+  margin-top: var(--s4); background: var(--surface); border: 1px solid var(--rule); border-radius: 14px;
+  padding: 13px var(--s4); font-size: 13.5px; color: var(--ink-soft); min-height: 62px;
+  display: flex; align-items: center;
+}
+.detail b { color: var(--ink); font-family: var(--f-disp); }
+
+.quote {
+  margin-top: var(--s4); background: var(--warm-wash); border-radius: 16px; padding: var(--s4);
+  font-size: 14px; line-height: 1.8; color: #6E4A2C;
+}
+.quote .by { display: block; margin-top: 6px; font-size: 11.5px; color: #9A7B5D; }
+
+details.more { margin-top: var(--s4); }
+details.more summary {
+  list-style: none; cursor: pointer; font-family: var(--f-disp); font-weight: 700; font-size: 14px;
+  color: var(--accent-deep); padding: 13px var(--s4); display: flex; align-items: center; gap: 6px;
+  background: var(--surface); border: 1.5px solid var(--rule); border-radius: 14px; min-height: var(--tap);
+}
+details.more[open] summary { border-radius: 14px 14px 0 0; border-bottom-color: transparent; }
+details.more[open] .axes { background: var(--surface); border: 1.5px solid var(--rule); border-top: 0;
+  border-radius: 0 0 14px 14px; padding: var(--s2) var(--s4) var(--s4); }
+details.more summary::-webkit-details-marker { display: none; }
+details.more summary::after { content: "＋"; margin-left: auto; color: var(--ink-faint); }
+details.more[open] summary::after { content: "−"; }
+.axes { display: flex; flex-direction: column; gap: 8px; padding-bottom: var(--s2); }
+.axis { display: grid; grid-template-columns: 9rem 1fr 2.4rem; align-items: center; gap: var(--s2); font-size: 12.5px; }
+.axis .track { height: 12px; border-radius: 99px; background: var(--ground-deep); overflow: hidden; }
+.axis .fill { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
+.axis .val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--ink-soft); }
+.axis.na .fill { background: repeating-linear-gradient(135deg, #C3B7AC 0 5px, #D6CCC2 5px 10px); width: 100%; }
+.axis.na .val { color: var(--ink-faint); font-weight: 500; font-size: 11px; }
+.axis-note { font-size: 11px; color: var(--ink-faint); margin-top: var(--s3); padding: 0 var(--s1); }
+
+/* 声がまだ無い駅 */
+.empty { text-align: center; margin-top: var(--s5); }
+.empty .mark {
+  width: 62px; height: 62px; margin: 0 auto; border-radius: 50%;
+  background: var(--ground-deep); color: var(--ink-faint); display: grid; place-items: center;
+}
+.empty .mark svg { width: 32px; height: 32px; }
+.empty h2 { font-size: 18px; margin-top: var(--s2); }
+.empty p { font-size: 14px; color: var(--ink-soft); margin-top: var(--s2); }
+.cta {
+  display: block; margin-top: var(--s4); background: var(--accent); color: #fff;
+  font-family: var(--f-disp); font-weight: 700; font-size: 16px; text-align: center; text-decoration: none;
+  border-radius: 16px; padding: 16px; min-height: var(--tap);
+  box-shadow: 0 10px 22px -14px rgba(59,122,98,.9);
+}
+.cta:hover { background: var(--accent-deep); }
+.cta-sub { text-align: center; font-size: 12px; color: var(--ink-faint); margin-top: var(--s2); }
+
+footer { text-align: center; color: var(--ink-faint); font-size: 11.5px; line-height: 1.8; padding: 0 var(--s4) var(--s6); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+  .grid.reveal .bulb { animation: none; }
+}
+</style>
+</head>
+<body>
+
+
+<p class="note">これは説明用の見本です。駅名は実在しますが、点数・件数・コメントはすべて<b>架空のサンプル</b>です。</p>
+
+<div class="app">
+  <!-- ── さがす ── -->
+  <section id="searchView">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 16h9V7a2 2 0 0 0-2-2H8"/><path d="M13 16 20 9"/>
+        <circle cx="6" cy="19" r="2"/><circle cx="16" cy="19" r="2"/>
+      </svg>
+      <span>行けた駅さがし</span>
+    </div>
+
+    <div class="ask">
+      <h1>どの駅に、行きますか？</h1>
+      <p>ベビーカーで行った人の声から、その駅の「できること」が光ります。</p>
+    </div>
+
+    <div class="searchbox">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+      </svg>
+      <input id="q" type="search" autocomplete="off" placeholder="駅名（ひらがなでも）"
+             aria-label="駅名を入力してさがす" aria-describedby="sugHelp">
+      <button class="clear" id="clear" type="button" aria-label="入力を消す" hidden>✕</button>
+    </div>
+    <p id="sugHelp" class="visually-hidden" style="position:absolute;left:-9999px">候補は入力の下に出ます</p>
+    <ul class="sug" id="sug" aria-label="駅の候補"></ul>
+
+    <div class="pop" id="pop">
+      <h2>よく見られている駅</h2>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="tellus">
+      <p>あなたが「便利だった」と思った駅も、<br>次に行く親子の道案内になります。</p>
+      <a class="link" href="https://kazuma5313.github.io/stroller-station-survey/" target="_blank" rel="noopener">2分のアンケートに答える →</a>
+    </div>
+  </section>
+
+  <!-- ── 結果 ── -->
+  <section id="resultView" hidden></section>
+</div>
+
+<footer>
+  ベビーカーで行ける駅ランキング（匿名アンケート）の結果イメージです。<br>
+  実在の駅の設備や評価を示すものではありません。
+</footer>
+
+<script>
+"use strict";
+
+/* ════════ データ（架空サンプル） ════════ */
+
+/* Q3の14項目。id / 画面の言葉（短く）/ 説明で使う言葉 */
+const TAGS = [
+  { id:"ev_near",   short:"改札そば<br>のEV",     full:"改札のすぐそばにエレベーター" },
+  { id:"ev_wide",   short:"広い<br>EV",           full:"エレベーターが広い" },
+  { id:"ev_many",   short:"EVが<br>複数",         full:"エレベーターが複数ある" },
+  { id:"ev_allexit",short:"どの出口<br>にもEV",   full:"どの出口にもエレベーター" },
+  { id:"gap_small", short:"すき間<br>が小さい",   full:"ホームと電車のすき間が小さい" },
+  { id:"homedoor",  short:"ホーム<br>ドア",       full:"ホームドアがある" },
+  { id:"wide_gate", short:"広い<br>改札・通路",   full:"改札や通路が広い" },
+  { id:"diaper",    short:"おむつ<br>替え",       full:"おむつ替えができる" },
+  { id:"nursing",   short:"授乳室",               full:"授乳室・ベビールームがある" },
+  { id:"toilet_in", short:"ベビーカー<br>ごとトイレ", full:"ベビーカーごと入れるトイレ" },
+  { id:"toilet_cl", short:"きれいな<br>トイレ",   full:"トイレが清潔" },
+  { id:"bench",     short:"休める<br>場所",       full:"座って休める場所がある" },
+  { id:"shop",      short:"買い物<br>・食事",     full:"駅ナカで買い物・食事ができる" },
+  { id:"sign",      short:"わかる<br>案内",       full:"案内表示がわかりやすい" }
+];
+
+const AXES = [
+  "たたまずに進めた", "遠回りしなかった", "EVに困らなかった", "混んでいても大丈夫",
+  "おむつ替え・授乳", "迷わずに行けた", "バスや車にもつなげた", "やさしくしてもらえた"
+];
+
+/* v=声の数 / ax=8軸の平均(0〜2, null は「使わなかった」が多く集計対象外) / tg=挙げた人の% */
+const STATIONS = [
+  { n:"みなとみらい", k:"みなとみらい minatomirai", pf:"神奈川県", ln:"みなとみらい線", v:96,
+    ax:[2.0,1.9,1.9,1.7,1.9,1.9,null,1.7],
+    tg:{ ev_near:88, ev_wide:71, ev_many:64, ev_allexit:52, gap_small:37, homedoor:80, wide_gate:66, diaper:74, nursing:69, toilet_in:58, toilet_cl:61, bench:44, shop:57, sign:72 },
+    q:"南口のエレベーターは改札を出てすぐ。ベビールームは3階で、ソファもあるのでゆっくり授乳できました。", by:"1歳のお子さんと利用" },
+  { n:"二子玉川", k:"ふたこたまがわ futakotamagawa", pf:"東京都", ln:"東急", v:74,
+    ax:[1.9,1.8,1.7,1.6,1.9,1.7,1.8,1.5],
+    tg:{ ev_near:76, ev_wide:63, ev_many:58, ev_allexit:41, gap_small:29, homedoor:62, wide_gate:57, diaper:81, nursing:77, toilet_in:66, toilet_cl:70, bench:52, shop:74, sign:59 },
+    q:"改札を出てそのまま商業施設に入れます。おむつ替えの台がどのフロアにもあって、探さずに済みました。", by:"0歳のお子さんと利用" },
+  { n:"越谷レイクタウン", k:"こしがやれいくたうん koshigaya", pf:"埼玉県", ln:"JR武蔵野線", v:41,
+    ax:[2.0,1.9,1.8,1.8,1.9,1.8,1.7,1.6],
+    tg:{ ev_near:79, ev_wide:74, ev_many:55, ev_allexit:62, gap_small:33, homedoor:41, wide_gate:83, diaper:86, nursing:79, toilet_in:71, toilet_cl:76, bench:64, shop:81, sign:68 },
+    q:"改札からずっと平らで、たたまずに行けました。授乳室が広くて、上の子も一緒に入れました。", by:"2歳と0歳のお子さんと利用" },
+  { n:"大宮", k:"おおみや omiya", pf:"埼玉県", ln:"JR・東武ほか", v:58,
+    ax:[1.6,1.3,1.7,1.2,1.7,1.4,1.7,1.5],
+    tg:{ ev_near:44, ev_wide:52, ev_many:71, ev_allexit:38, gap_small:22, homedoor:47, wide_gate:35, diaper:66, nursing:58, toilet_in:49, toilet_cl:44, bench:39, shop:68, sign:36 },
+    q:"乗り換えは少し歩きますが、エレベーターの数が多くて待ちませんでした。バス乗り場まで平らです。", by:"1歳のお子さんと利用" },
+  { n:"豊洲", k:"とよす toyosu", pf:"東京都", ln:"東京メトロ", v:39,
+    ax:[1.9,1.7,1.6,1.5,1.7,1.8,1.4,1.5],
+    tg:{ ev_near:71, ev_wide:56, ev_many:48, ev_allexit:44, gap_small:41, homedoor:88, wide_gate:62, diaper:63, nursing:51, toilet_in:55, toilet_cl:59, bench:41, shop:52, sign:66 },
+    q:"ホームドアがあるので、上の子が走っても怖くないです。改札もゆったりしています。", by:"3歳と1歳のお子さんと利用" },
+  { n:"天王寺", k:"てんのうじ tennoji", pf:"大阪府", ln:"JR・地下鉄ほか", v:52,
+    ax:[1.6,1.4,1.6,1.3,1.8,1.5,1.6,1.7],
+    tg:{ ev_near:48, ev_wide:44, ev_many:59, ev_allexit:36, gap_small:25, homedoor:52, wide_gate:41, diaper:72, nursing:66, toilet_in:58, toilet_cl:53, bench:47, shop:64, sign:42 },
+    q:"駅員さんが階段の前で必ず声をかけてくれます。ベビールームは改札内にあって助かりました。", by:"0歳のお子さんと利用" },
+  { n:"京都", k:"きょうと kyoto", pf:"京都府", ln:"JR・近鉄ほか", v:47,
+    ax:[1.7,1.3,1.8,1.2,1.8,1.6,1.8,1.6],
+    tg:{ ev_near:52, ev_wide:61, ev_many:68, ev_allexit:44, gap_small:28, homedoor:44, wide_gate:57, diaper:74, nursing:71, toilet_in:63, toilet_cl:66, bench:58, shop:72, sign:61 },
+    q:"広いぶん歩きますが、案内が多くて迷いません。バス乗り場までエレベーターでつながっています。", by:"1歳のお子さんと利用" },
+  { n:"金沢", k:"かなざわ kanazawa", pf:"石川県", ln:"JR・IRいしかわ", v:33,
+    ax:[1.9,1.8,1.7,1.8,1.8,1.9,1.7,1.8],
+    tg:{ ev_near:73, ev_wide:58, ev_many:49, ev_allexit:55, gap_small:36, homedoor:39, wide_gate:76, diaper:71, nursing:64, toilet_in:66, toilet_cl:79, bench:68, shop:63, sign:81 },
+    q:"駅の中が広くて、雨の日でも屋根の下だけで移動できました。案内表示が大きくて分かりやすいです。", by:"2歳のお子さんと利用" },
+  { n:"仙台", k:"せんだい sendai", pf:"宮城県", ln:"JR・地下鉄ほか", v:29,
+    ax:[1.8,1.6,1.8,1.5,1.7,1.7,1.8,1.7],
+    tg:{ ev_near:62, ev_wide:57, ev_many:66, ev_allexit:48, gap_small:31, homedoor:59, wide_gate:69, diaper:66, nursing:55, toilet_in:59, toilet_cl:62, bench:52, shop:66, sign:64 },
+    q:"地下鉄からJRへの乗り換えが、ぜんぶエレベーターでつながっていました。案内も分かりやすいです。", by:"1歳のお子さんと利用" },
+  { n:"藤沢", k:"ふじさわ fujisawa", pf:"神奈川県", ln:"JR・小田急ほか", v:21,
+    ax:[1.6,1.5,1.4,1.4,1.5,1.5,1.6,1.6],
+    tg:{ ev_near:57, ev_wide:38, ev_many:33, ev_allexit:29, gap_small:24, homedoor:33, wide_gate:43, diaper:52, nursing:38, toilet_in:48, toilet_cl:43, bench:38, shop:57, sign:48 },
+    q:"デッキからそのまま改札に入れます。混む時間は少し待ちますが、待つ場所があります。", by:"0歳のお子さんと利用" },
+  { n:"三島", k:"みしま mishima", pf:"静岡県", ln:"JR東海ほか", v:16,
+    ax:[1.9,1.8,1.6,1.9,1.6,1.7,1.9,1.8],
+    tg:{ ev_near:75, ev_wide:44, ev_many:31, ev_allexit:56, gap_small:44, homedoor:25, wide_gate:81, diaper:63, nursing:38, toilet_in:56, toilet_cl:69, bench:75, shop:50, sign:56 },
+    q:"改札からバス乗り場まで段差ゼロ。人が少ない時間だと、駅員さんがホームまで一緒に来てくれました。", by:"1歳のお子さんと利用" },
+  { n:"上田", k:"うえだ ueda", pf:"長野県", ln:"しなの鉄道ほか", v:6,
+    ax:[1.8,1.8,1.7,2.0,1.5,1.8,1.7,2.0],
+    tg:{ ev_near:83, ev_wide:50, ev_many:33, ev_allexit:67, gap_small:50, homedoor:17, wide_gate:83, diaper:67, nursing:33, toilet_in:67, toilet_cl:83, bench:83, shop:50, sign:67 },
+    q:"小さい駅ですが、改札からホームまでまっすぐ。人が少ないので、ゆっくり乗り降りできました。", by:"2歳のお子さんと利用" },
+  { n:"高松", k:"たかまつ takamatsu", pf:"香川県", ln:"JR四国ほか", v:5,
+    ax:[2.0,1.8,1.6,2.0,1.4,1.6,1.8,1.8],
+    tg:{ ev_near:80, ev_wide:40, ev_many:20, ev_allexit:60, gap_small:60, homedoor:20, wide_gate:80, diaper:60, nursing:40, toilet_in:60, toilet_cl:60, bench:80, shop:60, sign:60 },
+    q:"ホームが地上で段差がなく、そのまま乗れました。港へのバスも同じ高さでつながっています。", by:"0歳のお子さんと利用" },
+  { n:"直方", k:"のおがた nogata", pf:"福岡県", ln:"JR九州ほか", v:4,
+    ax:[2.0,2.0,1.8,2.0,1.5,1.8,1.8,2.0],
+    tg:{ ev_near:75, ev_wide:50, ev_many:25, ev_allexit:75, gap_small:50, homedoor:0, wide_gate:100, diaper:50, nursing:25, toilet_in:50, toilet_cl:75, bench:75, shop:25, sign:50 },
+    q:"エレベーターは1基だけど、改札の目の前。混まないので、待ったことがありません。", by:"1歳のお子さんと利用" },
+
+  /* まだ声が届いていない駅（検索はできる） */
+  { n:"新宿", k:"しんじゅく shinjuku", pf:"東京都", ln:"JR・私鉄各線", v:0 },
+  { n:"渋谷", k:"しぶや shibuya", pf:"東京都", ln:"JR・私鉄各線", v:0 },
+  { n:"池袋", k:"いけぶくろ ikebukuro", pf:"東京都", ln:"JR・私鉄各線", v:0 },
+  { n:"吉祥寺", k:"きちじょうじ kichijoji", pf:"東京都", ln:"JR・京王", v:0 },
+  { n:"町田", k:"まちだ machida", pf:"東京都", ln:"JR・小田急", v:0 },
+  { n:"立川", k:"たちかわ tachikawa", pf:"東京都", ln:"JR・多摩モノレール", v:0 },
+  { n:"横浜", k:"よこはま yokohama", pf:"神奈川県", ln:"JR・私鉄各線", v:0 },
+  { n:"武蔵小杉", k:"むさしこすぎ musashikosugi", pf:"神奈川県", ln:"JR・東急", v:0 },
+  { n:"千葉", k:"ちば chiba", pf:"千葉県", ln:"JR・千葉モノレール", v:0 },
+  { n:"名古屋", k:"なごや nagoya", pf:"愛知県", ln:"JR・名鉄・地下鉄", v:0 },
+  { n:"大阪", k:"おおさか osaka umeda", pf:"大阪府", ln:"JR・私鉄各線", v:0 },
+  { n:"三宮", k:"さんのみや sannomiya", pf:"兵庫県", ln:"JR・阪急ほか", v:0 },
+  { n:"博多", k:"はかた hakata", pf:"福岡県", ln:"JR・地下鉄", v:0 },
+  { n:"札幌", k:"さっぽろ sapporo", pf:"北海道", ln:"JR・地下鉄", v:0 }
+];
+
+const M_CONST = 10, C_CONST = 7.7;   /* ベイズ平均の定数（少ない票で満点が出ないようにする） */
+
+/* 答えた軸だけの平均(0〜2)×5 → 0〜10点。「使わなかった」軸は分母にも分子にも入れない */
+function rawScore(st) {
+  const used = (st.ax || []).filter(v => v !== null);
+  if (!used.length) return 0;
+  return used.reduce((a, b) => a + b, 0) / used.length * 5;
+}
+STATIONS.forEach(s => {
+  s.R = s.v ? rawScore(s) : 0;
+  s.S = s.v ? (s.v * s.R + M_CONST * C_CONST) / (s.v + M_CONST) : 0;
+});
+
+/* ════════ アイコン ════════ */
+const ICONS = {
+  ev_near:   '<path d="M4 4h9v16H4z"/><path d="M8.5 8.5 6.5 11h4z"/><path d="M8.5 15.5 6.5 13h4z"/><path d="M16 12h5m0 0-2.5-2.5M21 12l-2.5 2.5"/>',
+  ev_wide:   '<path d="M3 4h18v16H3z"/><path d="M7 12H4.5m0 0 2-2m-2 2 2 2"/><path d="M17 12h2.5m0 0-2-2m2 2-2 2"/><path d="M12 7v10"/>',
+  ev_many:   '<path d="M3 5h7v14H3z"/><path d="M14 5h7v14h-7z"/><path d="M6.5 9v6M17.5 9v6"/>',
+  ev_allexit:'<path d="M12 3v6"/><path d="M12 9 5 15v6M12 9l7 6v6"/><rect x="3" y="18" width="4" height="3"/><rect x="17" y="18" width="4" height="3"/><rect x="10" y="2" width="4" height="3"/>',
+  gap_small: '<circle cx="12" cy="9.5" r="4"/><circle cx="12" cy="9.5" r="1"/><path d="M2.5 16.5h7.5M14 16.5h7.5"/><path d="M2.5 19.5h7.5M14 19.5h7.5"/>',
+  homedoor:  '<path d="M3 8h18"/><path d="M3 16h18"/><path d="M6 8v8M12 8v8M18 8v8"/><path d="M3 5v14M21 5v14"/>',
+  wide_gate: '<path d="M4 6v12M20 6v12"/><path d="M8 12h8m0 0-2.5-2.5M16 12l-2.5 2.5M8 12l2.5-2.5M8 12l2.5 2.5"/>',
+  diaper:    '<path d="M3 9h18v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"/><path d="M6 9V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3"/><path d="M7 17v3M17 17v3"/>',
+  nursing:   '<path d="M10 3h4v3h-4z"/><path d="M9 6h6l1 4v9a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-9z"/><path d="M9.5 13h5"/>',
+  toilet_in: '<rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M8 14h5V9.5A2.5 2.5 0 0 0 10.5 7H9.5"/><path d="M13 14l3.2-3.2"/><circle cx="9.2" cy="16.6" r="1.3"/><circle cx="15" cy="16.6" r="1.3"/>',
+  toilet_cl: '<rect x="5" y="3.5" width="4" height="6" rx="1"/><path d="M3.5 9.5h9l-1 5.2A2.2 2.2 0 0 1 9.3 16.5H6.7a2.2 2.2 0 0 1-2.2-1.8z"/><path d="M8 16.5V20M5.5 20h5"/><path d="M17.6 4.6 18.6 7.2l2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1z"/>',
+  bench:     '<path d="M3 11h18"/><path d="M3 15h18"/><path d="M4 11v8M20 11v8"/><path d="M5 8h14"/><path d="M6 8V5M18 8V5"/>',
+  shop:      '<path d="M4 8h16l-1.2 11a2 2 0 0 1-2 1.8H7.2a2 2 0 0 1-2-1.8z"/><path d="M8.5 8V6a3.5 3.5 0 0 1 7 0v2"/>',
+  sign:      '<path d="M11.5 3.5v17"/><path d="M11.5 5.5h6.2L20.5 8l-2.8 2.5h-6.2z"/><path d="M11.5 13H5.3L2.5 15.5 5.3 18h6.2z"/>'
+};
+const icon = id =>
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" ' +
+  'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[id] || '') + '</svg>';
+
+/* ════════ さがす ════════ */
+const q = document.getElementById("q");
+const sug = document.getElementById("sug");
+const chips = document.getElementById("chips");
+const clearBtn = document.getElementById("clear");
+const searchView = document.getElementById("searchView");
+const resultView = document.getElementById("resultView");
+const POPULAR = ["みなとみらい", "二子玉川", "越谷レイクタウン", "大宮", "新宿"];
+
+chips.innerHTML = POPULAR.map(n => '<button type="button" data-n="' + n + '">' + n + '</button>').join("");
+chips.addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (b) open(STATIONS.find(s => s.n === b.dataset.n));
+});
+
+function match(text) {
+  const t = text.trim().toLowerCase();
+  if (!t) return [];
+  return STATIONS
+    .filter(s => (s.n + " " + s.k + " " + s.pf).toLowerCase().includes(t))
+    .sort((a, b) => b.v - a.v)
+    .slice(0, 6);
+}
+
+function renderSug() {
+  const t = q.value;
+  clearBtn.hidden = !t;
+  document.getElementById("pop").hidden = !!t;
+  if (!t.trim()) { sug.innerHTML = ""; return; }
+
+  const hits = match(t);
+  if (!hits.length) {
+    sug.innerHTML = '<li class="none">「' + t + '」に近い駅が見つかりませんでした。ひらがなでも探せます。</li>';
+    return;
+  }
+  sug.innerHTML = hits.map(s =>
+    '<li><button type="button" data-n="' + s.n + '">' +
+      '<span><span class="nm">' + s.n + '</span><span class="pf">' + s.pf + '・' + s.ln + '</span></span>' +
+      '<span class="cnt' + (s.v ? '' : ' zero') + '">' + (s.v ? s.v + '人の声' : 'まだ0人') + '</span>' +
+    '</button></li>').join("");
+}
+q.addEventListener("input", renderSug);
+q.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    const hits = match(q.value);
+    if (hits.length) { e.preventDefault(); open(hits[0]); }
+  }
+});
+sug.addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (b) open(STATIONS.find(s => s.n === b.dataset.n));
+});
+clearBtn.addEventListener("click", () => { q.value = ""; renderSug(); q.focus(); });
+
+/* ════════ 結果 ════════ */
+const SURVEY = "https://kazuma5313.github.io/stroller-station-survey/";
+const level = pct => pct >= 65 ? "hot" : pct >= 40 ? "on" : "";
+const verdict = s => s >= 9 ? "とても行きやすい" : s >= 8.3 ? "行きやすい" : s >= 7.6 ? "まずまず行けます" : "声を集めています";
+
+function open(st) {
+  if (!st) return;
+  resultView.innerHTML = st.v ? resultHTML(st) : emptyHTML(st);
+  searchView.hidden = true;
+  resultView.hidden = false;
+  window.scrollTo(0, 0);
+
+  const back = resultView.querySelector(".back");
+  back.addEventListener("click", () => {
+    resultView.hidden = true;
+    searchView.hidden = false;
+    renderSug();            /* 直前の検索語は残す。続けて別の駅を見る人が打ち直さずに済む */
+    window.scrollTo(0, 0);
+    q.focus();
+  });
+  back.focus();
+
+  const grid = resultView.querySelector(".grid");
+  if (!grid) return;
+
+  /* 左上から順に光らせる。触ったときだけ、その項目の説明を1行出す */
+  Array.from(grid.children).forEach((c, i) => {
+    c.querySelector(".bulb").style.animationDelay = (i * 38) + "ms";
+  });
+  grid.classList.add("reveal");
+  grid.addEventListener("click", e => {
+    const cell = e.target.closest(".cell");
+    if (!cell) return;
+    const on = cell.getAttribute("aria-pressed") === "true";
+    Array.from(grid.children).forEach(c => c.setAttribute("aria-pressed", "false"));
+    const box = resultView.querySelector(".detail");
+    if (on) { box.innerHTML = defaultDetail(); return; }
+    cell.setAttribute("aria-pressed", "true");
+    const tag = TAGS.find(t => t.id === cell.dataset.id);
+    const pct = st.tg[tag.id] || 0;
+    box.innerHTML = pct >= 40
+      ? '<span><b>' + tag.full + '</b><br>この駅を挙げた' + st.v + '人のうち、<b>' + pct + '%</b>の人が「便利だった」と選んでいます。</span>'
+      : '<span><b>' + tag.full + '</b><br>いまのところ ' + pct + '% の人だけが選んでいます。声が増えると変わるかもしれません。</span>';
+  });
+}
+
+const defaultDetail = () =>
+  '<span>アイコンを押すと、<b>何人が選んだか</b>が出ます。</span>';
+
+function resultHTML(st) {
+  const score = st.S.toFixed(1);
+  const cells = TAGS.map(t => {
+    const pct = st.tg[t.id] || 0;
+    return '<button type="button" class="cell ' + level(pct) + '" data-id="' + t.id + '" aria-pressed="false">' +
+      '<span class="bulb">' + icon(t.id) + '</span>' +
+      '<span class="lb">' + t.short + '</span></button>';
+  }).join("");
+
+  const axes = AXES.map((label, i) => {
+    const v = st.ax[i];
+    if (v === null) {
+      return '<div class="axis na"><span>' + label + '</span><span class="track"><span class="fill"></span></span>' +
+             '<span class="val">対象外</span></div>';
+    }
+    return '<div class="axis"><span>' + label + '</span><span class="track">' +
+           '<span class="fill" style="width:' + (v / 2 * 100).toFixed(0) + '%"></span></span>' +
+           '<span class="val">' + v.toFixed(1) + '</span></div>';
+  }).join("");
+
+  return '<button type="button" class="back">← ほかの駅をさがす</button>' +
+    '<div class="hero"><h1>' + st.n + '駅</h1><p class="pf">' + st.pf + '・' + st.ln + '</p>' +
+      '<div class="score"><span class="disc"></span>' + ringSVG(st.S) +
+        '<span class="num">' + score + '<small>点</small></span></div>' +
+      '<p class="verdict">' + verdict(st.S) + '</p>' +
+      '<p class="voices">' + st.v + '人の声から　10点満点・全体の平均は7.7点</p>' +
+    '</div>' +
+    '<div class="board"><div class="board-t"><h2>この駅でできること</h2><span>タップでくわしく</span></div>' +
+      '<div class="grid">' + cells + '</div>' +
+      '<div class="legend">' +
+        '<span><i class="hot"></i>多くの人が挙げた</span>' +
+        '<span><i class="on"></i>挙げた人がいる</span>' +
+        '<span><i></i>まだ声が少ない</span>' +
+      '</div>' +
+      '<p class="detail" aria-live="polite">' + defaultDetail() + '</p>' +
+    '</div>' +
+    '<div class="quote">' + st.q + '<span class="by">— ' + st.by + '</span></div>' +
+    '<details class="more"><summary>8つの軸で、くわしく見る</summary>' +
+      '<div class="axes">' + axes + '</div>' +
+      '<p class="axis-note">よかった=2／ふつう=1／こまった=0 の平均。「使わなかった」と答えられた軸は集計から外しています。</p>' +
+    '</details>' +
+    '<a class="cta" href="' + SURVEY + '" target="_blank" rel="noopener">' + st.n + '駅のこと、あなたも教える</a>' +
+    '<p class="cta-sub">2分・匿名・答えなくてもこのページは見られます</p>';
+}
+
+/* 点数のリング。0〜10点を円周で表す（数字が主役なので、線は細く） */
+function ringSVG(s) {
+  const r = 62, c = 2 * Math.PI * r, len = c * Math.max(0, Math.min(1, s / 10));
+  return '<svg class="ring" viewBox="0 0 132 132" aria-hidden="true">' +
+    '<circle cx="66" cy="66" r="' + r + '" fill="none" stroke="#DCEEE5" stroke-width="5"/>' +
+    '<circle cx="66" cy="66" r="' + r + '" fill="none" stroke="#4E9C7F" stroke-width="5" ' +
+      'stroke-linecap="round" stroke-dasharray="' + len.toFixed(1) + ' ' + c.toFixed(1) + '"/></svg>';
+}
+
+function emptyHTML(st) {
+  const cells = TAGS.map(t =>
+    '<span class="cell"><span class="bulb">' + icon(t.id) + '</span><span class="lb">' + t.short + '</span></span>').join("");
+  return '<button type="button" class="back">← ほかの駅をさがす</button>' +
+    '<div class="hero"><h1>' + st.n + '駅</h1><p class="pf">' + st.pf + '・' + st.ln + '</p></div>' +
+    '<div class="empty"><div class="mark">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M4 16h9V7a2 2 0 0 0-2-2H8"/><path d="M13 16 20 9"/>' +
+        '<circle cx="6" cy="19" r="2"/><circle cx="16" cy="19" r="2"/></svg></div>' +
+      '<h2>まだ、この駅の声が届いていません</h2>' +
+      '<p>あなたが1人目になれます。<br>1つ声が入ると、下のアイコンが光りはじめます。</p></div>' +
+    '<div class="board"><div class="grid">' + cells + '</div></div>' +
+    '<a class="cta" href="' + SURVEY + '" target="_blank" rel="noopener">' + st.n + '駅のこと、教える</a>' +
+    '<p class="cta-sub">2分・匿名・「便利だった」だけ聞きます</p>';
+}
+
+renderSug();
+</script>
+
+</body>
+</html>
