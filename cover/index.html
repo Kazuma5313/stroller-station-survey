@@ -79,10 +79,18 @@
   }
 
   .turn {
-    font-size: 1.05rem; line-height: 1.7; font-weight: 700;
-    margin: 0 0 var(--s5); text-wrap: balance;
+    font-size: 1.1rem; line-height: 1.75; font-weight: 700;
+    margin: 0 0 var(--s3);
   }
-  .turn em { font-style: normal; color: var(--accent-deep); }
+  .turn em { font-style: normal; color: var(--ink); }
+  .bridge {
+    font-size: .97rem; line-height: 1.8; color: var(--ink-soft);
+    margin: 0 0 var(--s5);
+  }
+  .close {
+    font-size: 1.15rem; font-weight: 700; color: var(--accent-deep);
+    margin: var(--s5) 0 var(--s2); text-align: center;
+  }
 
   /* ── 解決：すっきりの色（みどり） ───────── */
   .solve {
@@ -101,8 +109,8 @@
   .after b { color: var(--ink); font-weight: 700; }
 
   .ask {
-    border-top: 1px solid var(--rule); padding-top: var(--s4);
-    font-size: .95rem; line-height: 1.75; color: var(--ink-soft); margin: 0;
+    font-size: .9rem; line-height: 1.7; color: var(--ink-faint);
+    margin: 0; text-align: center;
   }
   .ask b { color: var(--ink); }
 
@@ -141,8 +149,8 @@
     <h1>その駅、ベビーカーで<br>行けるかな。</h1>
 
     <p class="lede">
-      エレベーターはどこ？ 授乳室はある？<br>
-      出かける前に調べて、着いてからまた迷う。
+      出かける前に、何度も調べる。<br>
+      それでも駅に着いて、また迷う。
     </p>
 
     <div class="voices">
@@ -152,21 +160,24 @@
       <div class="voice">また、並ぶのか</div>
     </div>
 
-    <p class="turn">どれも、<em>行った人にしかわからない</em>ことでした。</p>
+    <p class="turn">電車の時刻は調べられるのに、<br><em>エレベーターのことは、どこにも書いていない。</em></p>
+
+    <p class="bridge">誰も悪くないのに、毎回こまる。<br>知っている人はいるのに、書かれていないだけ。</p>
 
     <div class="solve">
-      <p class="solve-lead">だから、行った人の「ここは便利だったよ」を集めています。</p>
-      <p class="solve-key">あなたの1駅ぶんが、<br>次に行く親子の下調べを省きます。</p>
+      <p class="solve-lead">あなたの「あの駅は大丈夫だったよ」も、<br>まだどこにも書かれていません。</p>
+      <p class="solve-key">1駅ぶん置いていってくれたら、<br>次に行く親子は、もう調べずに済みます。</p>
     </div>
 
     <ul class="after">
       <li>集まった声は <b>「ベビーカーで行ける駅」</b> としてまとめ、あらためて公開します</li>
-      <li>「ここだけ直れば行けるのに」という声は、<b>鉄道会社へ匿名でお届けします</b></li>
+      <li>「ここだけ直れば行けるのに」は、<b>鉄道会社へ匿名で届けます</b>。<br>
+        1件だと感想ですが、何十件も集まれば、<b>それは要望になります</b>。</li>
     </ul>
 
+    <p class="close">1駅ぶんで、いいんです。</p>
     <p class="ask">
-      お願いするのは <b>便利だった駅を1駅だけ</b>。約90秒・匿名です。<br>
-      困った駅のことも聞きますが、<b>駅名を公開することはありません</b>。
+      約90秒・匿名です。困った駅のことも聞きますが、<b>駅名を公開することはありません</b>。
     </p>
   </main>
 
