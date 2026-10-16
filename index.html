@@ -8,7 +8,7 @@
 <!-- スマホのブラウザ上下のバーも同じ生成り色にして、黒い帯が出ないようにする -->
 <meta name="theme-color" content="#F7F2EC">
 <meta name="format-detection" content="telephone=no">
-<meta name="description" content="ベビーカーで行ける駅ランキングの匿名アンケート">
+<meta name="description" content="ベビーカーで行ける駅さがしの匿名アンケート">
 <title>その駅、ベビーカーで行けるかな。｜ベビーカーで行ける駅さがし</title>
 <style>
   /* ── やわらかい配色。ダークモードは使わない（黒は威圧感があるため） ── */
@@ -445,7 +445,7 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
   var SUBMIT_URL = "https://script.google.com/macros/s/AKfycbyNUE1wPl-W1tKyNVqKk63VZmao7VNZEsldvao64glSrm62keiRSkp3S9UqOTBtG4zIYQ/exec";
 
   var DEMO_TEXT = "動作見本（プロトタイプ）｜入力内容はどこにも送信されません";
-  var LIVE_TEXT = "ベビーカーで行ける駅ランキング｜匿名アンケート";
+  var LIVE_TEXT = "ベビーカーで行ける駅さがし｜匿名アンケート";
   function isLive() { return /^https:\/\//.test(SUBMIT_URL); }
 
   /* ══ 選択肢 ══ */
@@ -901,7 +901,7 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
       var w = document.createElement("div");
       w.appendChild(el('<p class="eyebrow">質問 2</p>'));
       w.appendChild(el('<h1>駅名は思い出せなくて大丈夫です。<br>駅に「これがあったら便利」なものはどれですか？</h1>'));
-      w.appendChild(el('<p class="lede">あてはまるものすべてを選んでください。鉄道会社への要望としてお届けします。</p>'));
+      w.appendChild(el('<p class="lede">あてはまるものすべてを選んでください。</p>'));
       w.appendChild(checkList(HELPED, "q2b", state.q2b, function () { save(); renderNav(); }, {
         value: state.q2bOther, placeholder: "例：ベビーカーを置いておける場所",
         onText: function (v) { state.q2bOther = v; save(); }
@@ -921,7 +921,7 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
       g.setAttribute("aria-label", "改札・路線");
       g.addEventListener("input", function () { state.gate = g.value; save(); });
       f.appendChild(g); w.appendChild(f);
-      w.appendChild(el('<p class="note">大きな駅は会社や改札ごとに使いやすさが違います。わかる範囲で教えていただけると、その場所を運営する会社に正確にお届けできます。</p>'));
+      w.appendChild(el('<p class="note">大きな駅は会社や改札ごとに使いやすさが違います。わかる範囲で教えていただけると、どの場所の話かが正確に伝わります。</p>'));
       return w;
     },
 
@@ -1052,10 +1052,10 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
       var p = el('<div class="private-panel"></div>');
       p.appendChild(el('<p class="lock">ここから先は公開されません</p>'));
       p.appendChild(el('<h1>困った駅のことも、聞かせてください。</h1>'));
-      p.appendChild(el('<p class="lede" style="margin-bottom:0">このランキングは「よかった駅」を伝える企画です。<br>' +
+      p.appendChild(el('<p class="lede" style="margin-bottom:0">この調査は「よかった駅」を集める企画です。<br>' +
         '困った場所の駅名を、私たちが公開することは<strong>ありません</strong>。<br><br>' +
-        'いただいた内容は、その駅を運営する鉄道会社に<strong>匿名でお届けする改善リクエスト</strong>としてだけ使います。' +
-        'どこがだめかを広めるより、直してもらうほうが、次に来る親子の役に立つと考えているからです。</p>'));
+        'いただいた内容は公開せず、<strong>私たちが集計して読むためだけ</strong>に使います。' +
+        'どこで何に困っているのかが分かると、「行ける駅」をより正しく見分けられるからです。</p>'));
       w.appendChild(p);
       w.appendChild(el('<p class="note">ここから先はすべて任意です。答えずに終えていただいても、ここまでの回答は記録されています。<br>' +
         '<strong>いま入力いただいたメールアドレスと、ここから先の内容は結びつけません。</strong>' +
@@ -1079,7 +1079,7 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
       var w = document.createElement("div");
       w.appendChild(el('<p class="eyebrow priv">質問 10<span class="optional-tag">任意・非公開</span></p>'));
       w.appendChild(el('<h1>「ここだけ直れば行けるのに」という点を、ひとつだけ挙げるとしたら？</h1>'));
-      w.appendChild(el('<p class="lede">いちばん困っている1点だけで大丈夫です。鉄道会社にそのままお届けします。</p>'));
+      w.appendChild(el('<p class="lede">いちばん困っている1点だけで大丈夫です。</p>'));
       w.appendChild(textarea(state.tFix, 80, "例）ホーム端のエレベーターがもう1基あれば、朝でも乗れます。", function (v) { state.tFix = v; save(); }));
       return w;
     },
@@ -1088,12 +1088,8 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
       var w = document.createElement("div");
       w.appendChild(el('<p class="eyebrow priv">質問 11<span class="optional-tag">任意・非公開</span></p>'));
       w.appendChild(el('<h1>困った場所の写真があれば、添付してください。</h1>'));
-      w.appendChild(el('<p class="lede">この写真は<strong>公開されません</strong>。「この段差です」の1枚が、文章10件よりも改善を動かします。</p>'));
+      w.appendChild(el('<p class="lede">この写真は<strong>公開されません</strong>。どこで困ったのかを、私たちが正しく読み取るために使います。</p>'));
       w.appendChild(photoField("bad", 3));
-      var cs = el('<div class="consents"></div>');
-      cs.appendChild(consent("この写真を、該当する鉄道会社に匿名で提供することに同意します", state.consentOperator === true, function (v) { state.consentOperator = v ? true : null; save(); render(); }));
-      cs.appendChild(consent("提供せず、運営の改善検討のみに使ってください", state.consentOperator === false, function (v) { state.consentOperator = v ? false : null; save(); render(); }));
-      w.appendChild(cs);
       w.appendChild(el('<p class="note">写真は場所が特定できるため、<strong>公開・報道には一切使用しません</strong>。</p>'));
       return w;
     },
@@ -1118,7 +1114,7 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
     email: function () {
       var w = document.createElement("div");
       w.appendChild(el('<p class="eyebrow">質問 8<span class="optional-tag">任意</span></p>'));
-      w.appendChild(el('<h1>ランキングができたら、お知らせしますか？</h1>'));
+      w.appendChild(el('<h1>結果がまとまったら、お知らせしますか？</h1>'));
       w.appendChild(el('<p class="lede">写真をあとから追加したいときのご案内もお送りします。ほかの用途には使いません。</p>'));
       var f = el('<div class="field"></div>');
       var i = document.createElement("input");
@@ -1171,15 +1167,15 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
       var steps = el('<ol class="afterlist"></ol>');
       [
         '集まった回答をまとめて集計します',
-        '「ベビーカーで行ける駅ランキング」として、あらためて発表します',
+        '「ベビーカーで行ける駅」としてまとめ、あらためて公開します',
         isForget
-          ? '多く挙がった設備は、要望として鉄道会社にお届けします'
-          : '困った駅としていただいた内容は、公開せずに鉄道会社へお届けします'
+          ? 'いただいた「あったら便利」は、使いやすい駅を見分ける材料にします'
+          : '困った駅としていただいた内容は公開せず、集計して読むためだけに使います'
       ].forEach(function (t) { steps.appendChild(el('<li>' + t + '</li>')); });
       w.appendChild(steps);
 
-      w.appendChild(el('<p class="note">途中経過や、いまの順位は公開していません。' +
-        '<strong>順位が見えると採点が甘くなってしまう</strong>ため、集計が終わるまでは誰にも見えないようにしています。</p>'));
+      w.appendChild(el('<p class="note">途中経過は公開していません。' +
+        '<strong>途中の結果が見えると、回答がそれに引っぱられてしまう</strong>ため、集計が終わるまでは誰にも見えないようにしています。</p>'));
 
       if (!state.email.trim()) {
         w.appendChild(el('<p class="note">結果が出たときにお知らせを受け取りたい場合は、' +
