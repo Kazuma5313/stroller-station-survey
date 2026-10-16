@@ -218,6 +218,8 @@
   input:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-wash); }
   textarea { resize: vertical; min-height: 7rem; line-height: 1.75; }
   .field { margin-top: var(--s4); }
+  .other-field { margin: -2px 0 2px 34px; }
+  .other-field input { width: 100%; }
   .field-label { font-size: .9rem; color: var(--ink-soft); margin-bottom: 6px; display: block; font-weight: 700; }
   .counter { text-align: right; font-size: .8rem; color: var(--ink-faint); font-variant-numeric: tabular-nums; margin-top: var(--s1); }
   .counter.over { color: var(--poor); }
@@ -464,6 +466,7 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
     "駅ナカで買い物・食事ができる",
     "案内表示がわかりやすい"
   ];
+  var OTHER = "その他";   // 「その他（自由記述）」を選んだときに配列へ入る値
   var TROUBLE = [
     "エレベーターが遠い・見つからない",
     "エレベーターが混んでいて待つ",
@@ -506,7 +509,7 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
   /* ══ 状態 ══ */
   var SAVE_KEY = "stroller-station-survey-v1";
   var state = {
-    q1: null, q2: [], q2b: [], station: "", gate: "",
+    q1: null, q2: [], q2b: [], q2Other: "", q2bOther: "", station: "", gate: "",
     axes: {}, axisIdx: 0, comment: "",
     consentSite: false, consentPress: false, credit: "",
     tStation: "", tItems: [], tDetail: "", tFix: "",
@@ -540,7 +543,7 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
       photos[b] = [];
     });
     state = {
-      q1: null, q2: [], q2b: [], station: "", gate: "",
+      q1: null, q2: [], q2b: [], q2Other: "", q2bOther: "", station: "", gate: "",
       axes: {}, axisIdx: 0, comment: "",
       consentSite: false, consentPress: false, credit: "",
       tStation: "", tItems: [], tDetail: "", tFix: "",
@@ -597,23 +600,39 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
     return wrap;
   }
 
-  function checkList(labels, key, selected, onChange) {
+  /* other を渡すと、並べ替えた選択肢の最後に「その他（自由記述）」を足す。
+     その他は並べ替えの対象外で、選んだときだけ記入欄が開く */
+  function checkList(labels, key, selected, onChange, other) {
     var wrap = document.createElement("div"); wrap.className = "opts";
-    var ord = orderFor(key, labels.length);
-    ord.forEach(function (i) {
-      var txt = labels[i];
+    function item(txt, label, onToggle) {
       var on = selected.indexOf(txt) >= 0;
       var lab = el('<label class="opt' + (on ? " sel" : "") + '">' +
-        '<input type="checkbox"' + (on ? " checked" : "") + '><span>' + esc(txt) + '</span></label>');
+        '<input type="checkbox"' + (on ? " checked" : "") + '><span>' + esc(label) + '</span></label>');
       lab.querySelector("input").addEventListener("change", function (e) {
         var p = selected.indexOf(txt);
         if (e.target.checked) { if (p < 0) selected.push(txt); }
         else if (p >= 0) selected.splice(p, 1);
         lab.classList.toggle("sel", e.target.checked);
+        if (onToggle) onToggle(e.target.checked);
         onChange();
       });
       wrap.appendChild(lab);
-    });
+    }
+    orderFor(key, labels.length).forEach(function (i) { item(labels[i], labels[i]); });
+    if (other) {
+      var f = el('<div class="other-field"></div>');
+      var inp = document.createElement("input");
+      inp.type = "text"; inp.value = other.value; inp.maxLength = 60;
+      inp.placeholder = other.placeholder; inp.setAttribute("aria-label", "その他の内容");
+      inp.addEventListener("input", function () { other.onText(inp.value); });
+      f.appendChild(inp);
+      f.style.display = selected.indexOf(OTHER) >= 0 ? "" : "none";
+      item(OTHER, "その他（自由記述）", function (on) {
+        f.style.display = on ? "" : "none";
+        if (on) inp.focus();
+      });
+      wrap.appendChild(f);
+    }
     return wrap;
   }
 
@@ -754,6 +773,8 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
         q1: state.q1,
         q3_helped: state.q2,
         q3b_wanted: state.q2b,
+        q3_helpedOther: state.q2.indexOf(OTHER) >= 0 ? state.q2Other.trim() : "",
+        q3b_wantedOther: state.q2b.indexOf(OTHER) >= 0 ? state.q2bOther.trim() : "",
         q2_station: state.station.trim().replace(/駅$/, ""),
         q2_gate: state.gate,
         q4_axes: state.axes,
@@ -869,7 +890,10 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
       w.appendChild(el('<p class="eyebrow">質問 3</p>'));
       w.appendChild(el('<h1>どんなところが「便利だった」ですか？</h1>'));
       w.appendChild(el('<p class="lede">あてはまるものすべてを選んでください。</p>'));
-      w.appendChild(checkList(HELPED, "q2", state.q2, function () { save(); renderNav(); }));
+      w.appendChild(checkList(HELPED, "q2", state.q2, function () { save(); renderNav(); }, {
+        value: state.q2Other, placeholder: "例：ベビーカー置き場があった",
+        onText: function (v) { state.q2Other = v; save(); }
+      }));
       return w;
     },
 
@@ -878,7 +902,10 @@ var COVER_SRC = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAQDAwQD
       w.appendChild(el('<p class="eyebrow">質問 2</p>'));
       w.appendChild(el('<h1>駅名は思い出せなくて大丈夫です。<br>駅に「これがあったら便利」なものはどれですか？</h1>'));
       w.appendChild(el('<p class="lede">あてはまるものすべてを選んでください。鉄道会社への要望としてお届けします。</p>'));
-      w.appendChild(checkList(HELPED, "q2b", state.q2b, function () { save(); renderNav(); }));
+      w.appendChild(checkList(HELPED, "q2b", state.q2b, function () { save(); renderNav(); }, {
+        value: state.q2bOther, placeholder: "例：ベビーカーを置いておける場所",
+        onText: function (v) { state.q2bOther = v; save(); }
+      }));
       return w;
     },
 
